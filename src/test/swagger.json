@@ -1,0 +1,792 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "JepriaShowcase REST API"
+  },
+  "servers": [
+    {
+      "url": "/{appContextPath}/{apiEndpoint}"
+    }
+  ],
+  "tags": [
+    {
+      "name": "feature: entity",
+      "description": "Entity operations (CRUD)"
+    },
+    {
+      "name": "feature: search",
+      "description": "Feature search operations"
+    },
+    {
+      "name": "feature-process: entity",
+      "description": "Entity operations (CRUD) for FeatureProcess"
+    },
+    {
+      "name": "dict",
+      "description": "Dictionaries"
+    },
+    {
+      "name": "other",
+      "description": "Other operations"
+    }
+  ],
+  "paths": {
+    "/feature/{recordId}": {
+      "get": {
+        "tags": ["feature: entity"],
+        "summary": "Get record by ID",
+        "description": "",
+        "operationId": "getRecordById-feature",
+        "parameters": [
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json;charset=utf-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["feature: entity"],
+        "summary": "Update record",
+        "description": "",
+        "operationId": "update",
+        "parameters": [
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json;charset=utf-8": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureUpdateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "successful operation"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["feature: entity"],
+        "summary": "Delete record by ID",
+        "description": "",
+        "operationId": "deleteRecordById-feature",
+        "parameters": [
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/feature": {
+      "post": {
+        "tags": ["feature: entity"],
+        "summary": "Create record",
+        "description": "",
+        "operationId": "create-feature",
+        "requestBody": {
+          "content": {
+            "application/json;charset=utf-8": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/feature/search/{searchId}/resultset-size": {
+      "get": {
+        "tags": ["feature: search"],
+        "summary": "Get size of a resultset for a search request",
+        "description": "",
+        "operationId": "getSearchResultsetSize",
+        "parameters": [
+          {
+            "name": "searchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Cache-Control",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json;charset=utf-8": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/feature/search/{searchId}/resultset/paged-by-{pageSize}/{page}": {
+      "get": {
+        "tags": ["feature: search"],
+        "summary": "Get paged resultset for a search request",
+        "description": "",
+        "operationId": "getResultsetPaged",
+        "parameters": [
+          {
+            "name": "searchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "pattern": "\\d+"
+            }
+          },
+          {
+            "name": "page",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Cache-Control",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json;charset=utf-8": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/feature/option/feature-operator": {
+      "get": {
+        "tags": ["dict"],
+        "summary": "Get feature operator options",
+        "description": "",
+        "operationId": "getFeatureOperator",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json;charset=utf-8": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OptionDtoInteger"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/feature/{featureId}/set-feature-responsible": {
+      "post": {
+        "tags": ["other"],
+        "summary": "Set responsible operator for the feature",
+        "description": "",
+        "operationId": "setFeatureResponsible",
+        "parameters": [
+          {
+            "name": "featureId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "responsibleId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/feature/option/feature-status": {
+      "get": {
+        "tags": ["dict"],
+        "summary": "Get feature status options",
+        "description": "",
+        "operationId": "getFeatureStatus",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json;charset=utf-8": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OptionDtoString"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/feature/search": {
+      "post": {
+        "tags": ["feature: search"],
+        "summary": "Post search request",
+        "description": "",
+        "operationId": "postSearch",
+        "parameters": [
+          {
+            "name": "Extended-Response",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Cache-Control",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json;charset=utf-8": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchRequestDtoFeatureSearchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/feature/search/{searchId}/resultset": {
+      "get": {
+        "tags": ["feature: search"],
+        "summary": "Get resultset for a search request",
+        "description": "",
+        "operationId": "getResultset",
+        "parameters": [
+          {
+            "name": "searchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "Cache-Control",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json;charset=utf-8": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/feature/search/{searchId}": {
+      "get": {
+        "tags": ["feature: search"],
+        "summary": "Get search request by ID",
+        "description": "",
+        "operationId": "getSearchRequest",
+        "parameters": [
+          {
+            "name": "searchId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json;charset=utf-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchRequestDtoFeatureSearchDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/feature/{featureId}/feature-process": {
+      "get": {
+        "tags": ["feature-process: entity"],
+        "summary": "List all records for the single feature by ID",
+        "description": "",
+        "operationId": "findFeatureProcess",
+        "parameters": [
+          {
+            "name": "featureId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json;charset=utf-8": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureProcessDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["feature-process: entity"],
+        "summary": "Create record",
+        "description": "",
+        "operationId": "create-feature-process",
+        "parameters": [
+          {
+            "name": "featureId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json;charset=utf-8": {
+              "schema": {
+                "$ref": "#/components/schemas/FeatureProcessCreateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "default": {
+            "description": "successful operation"
+          }
+        }
+      }
+    },
+    "/feature/{featureId}/feature-process/{recordId}": {
+      "get": {
+        "tags": ["feature-process: entity"],
+        "summary": "Get record by ID",
+        "description": "",
+        "operationId": "getRecordById-feature-process",
+        "parameters": [
+          {
+            "name": "featureId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json;charset=utf-8": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureProcessDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["feature-process: entity"],
+        "summary": "Delete record by ID",
+        "description": "",
+        "operationId": "deleteRecordById-feature-process",
+        "parameters": [
+          {
+            "name": "featureId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "successful operation"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "FeatureUpdateDto": {
+        "type": "object",
+        "properties": {
+          "featureName": {
+            "type": "string"
+          },
+          "featureNameEn": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "responsibleId": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "FeatureCreateDto": {
+        "type": "object",
+        "properties": {
+          "featureName": {
+            "type": "string"
+          },
+          "featureNameEn": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "FeatureDto": {
+        "type": "object",
+        "properties": {
+          "featureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "featureName": {
+            "type": "string"
+          },
+          "featureNameEn": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "featureStatus": {
+            "$ref": "#/components/schemas/OptionDtoString"
+          },
+          "dateIns": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "author": {
+            "$ref": "#/components/schemas/OptionDtoInteger"
+          },
+          "responsible": {
+            "$ref": "#/components/schemas/OptionDtoInteger"
+          }
+        }
+      },
+      "OptionDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "object"
+          }
+        }
+      },
+      "OptionDtoInteger": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "OptionDtoString": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "ColumnSortConfigurationDto": {
+        "type": "object",
+        "properties": {
+          "columnName": {
+            "type": "string"
+          },
+          "sortOrder": {
+            "type": "string"
+          }
+        }
+      },
+      "FeatureSearchDto": {
+        "type": "object",
+        "properties": {
+          "featureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "featureNameTemplate": {
+            "type": "string"
+          },
+          "featureNameEnTemplate": {
+            "type": "string"
+          },
+          "statusCodeList": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "authorId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "responsibleId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dateInsFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dateInsTo": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "maxRowCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "SearchRequestDto": {
+        "type": "object",
+        "properties": {
+          "template": {
+            "type": "object"
+          },
+          "listSortConfiguration": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ColumnSortConfigurationDto"
+            }
+          }
+        }
+      },
+      "SearchRequestDtoFeatureSearchDto": {
+        "type": "object",
+        "properties": {
+          "template": {
+            "$ref": "#/components/schemas/FeatureSearchDto"
+          },
+          "listSortConfiguration": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ColumnSortConfigurationDto"
+            }
+          }
+        }
+      },
+      "FeatureProcessCreateDto": {
+        "type": "object",
+        "properties": {
+          "featureStatusCode": {
+            "type": "string"
+          }
+        }
+      },
+      "FeatureProcessDto": {
+        "type": "object",
+        "properties": {
+          "featureProcessId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "featureId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "featureStatusCode": {
+            "type": "string"
+          },
+          "featureStatusName": {
+            "type": "string"
+          },
+          "dateIns": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}
