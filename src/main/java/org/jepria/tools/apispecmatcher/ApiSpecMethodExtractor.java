@@ -7,5 +7,5 @@ import java.util.List;
  * Extracts api-spec methods from a resource
  */
 public interface ApiSpecMethodExtractor {
-  List<ApiSpecMethod> extract(Reader apiSpec);
+  List<ApiSpecMethod> extract(Resource apiSpec);
 }

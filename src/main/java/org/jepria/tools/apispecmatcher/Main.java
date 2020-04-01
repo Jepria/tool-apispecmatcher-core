@@ -1,6 +1,7 @@
 package org.jepria.tools.apispecmatcher;
 
 
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.PrintStream;
 import java.io.Reader;
@@ -10,6 +11,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Main {
 
@@ -82,51 +84,24 @@ public class Main {
         return;
       }
 
-      Matcher.MatchResult matchResult;
+      final List<Resource> apiSpecResources = pathsToResources(apiSpecs);
+      final List<Resource> jaxrsAdapterResources = pathsToResources(jaxrsAdapters);
 
-      {
-        final List<Reader> apiSpecReaders = new ArrayList<>();
-        final List<Reader> jaxrsAdapterReaders = new ArrayList<>();
-        try {
-          for (Path path: apiSpecs) {
-            apiSpecReaders.add(new FileReader(path.toFile()));
-          }
-          for (Path path: jaxrsAdapters) {
-            jaxrsAdapterReaders.add(new FileReader(path.toFile()));
-          }
+      Matcher.MatchParams params = new Matcher.MatchParams(apiSpecResources, jaxrsAdapterResources);
+      Matcher.MatchResult matchResult = new MatcherImpl().match(params);
 
-
-          Matcher.MatchParams params = new Matcher.MatchParams(apiSpecReaders, jaxrsAdapterReaders);
-          matchResult = new MatcherImpl().match(params);
-
-
-        } finally { // TODO this is not a correct try-with-resources replacement
-          for (Reader r: apiSpecReaders) {
-            r.close();
-          }
-          for (Reader r: jaxrsAdapterReaders) {
-            r.close();
-          }
-        }
-      }
-
-
-      if (matchResult.nonDocumentedMethods.stream().anyMatch(collection -> !collection.isEmpty()) ||
-              matchResult.nonImplementedMethods.stream().anyMatch(collection -> !collection.isEmpty())) {
+      if (matchResult.nonDocumentedMethods != null && !matchResult.nonDocumentedMethods.isEmpty() ||
+              matchResult.nonImplementedMethods != null && !matchResult.nonImplementedMethods.isEmpty()) {
         System.out.println("Match failed");
 
-        if (!matchResult.nonDocumentedMethods.isEmpty()) {
-          for (int i = 0; i < matchResult.nonDocumentedMethods.size(); i++) {
-            for (JaxrsMethod nonDocumentedMethod: matchResult.nonDocumentedMethods.get(i)) {
-              System.out.println("Non-documented method in file " + jaxrsAdapterPaths.get(i) + ": " + nonDocumentedMethod.httpMethod() + " " + nonDocumentedMethod.path());
-            }
+        if (matchResult.nonDocumentedMethods != null && !matchResult.nonDocumentedMethods.isEmpty()) {
+          for (JaxrsMethod nonDocumentedMethod: matchResult.nonDocumentedMethods) {
+            System.out.println("Non-documented method in file " + nonDocumentedMethod.resource().location().asString() + ": " + nonDocumentedMethod.httpMethod() + " " + nonDocumentedMethod.path());
           }
         }
-        if (!matchResult.nonImplementedMethods.isEmpty()) {
-          for (int i = 0; i < matchResult.nonImplementedMethods.size(); i++) {
-            for (ApiSpecMethod nonImplementedMethod: matchResult.nonImplementedMethods.get(i)) {
-              System.out.println("Non-implemented method in file " + apiSpecPaths.get(i) + ": " + nonImplementedMethod.httpMethod() + " " + nonImplementedMethod.path());
-            }
+        if (matchResult.nonImplementedMethods != null && !matchResult.nonImplementedMethods.isEmpty()) {
+          for (ApiSpecMethod nonImplementedMethod: matchResult.nonImplementedMethods) {
+            System.out.println("Non-implemented method in file " + nonImplementedMethod.resource().location().asString() + ": " + nonImplementedMethod.httpMethod() + " " + nonImplementedMethod.path());
           }
         }
       } else {
@@ -134,5 +109,33 @@ public class Main {
       }
 
     } catch (Throwable e) { throw new RuntimeException(e); }
+  }
+
+  protected static List<Resource> pathsToResources(List<Path> paths) {
+    if (paths == null) {
+      return null;
+    }
+
+    List<Resource> reources = paths.stream().map(path -> new Resource() {
+      @Override
+      public Location location() {
+        return new Location() {
+          @Override
+          public String asString() {
+            return path.toString();
+          }
+        };
+      }
+      @Override
+      public Reader newReader() {
+        try {
+          return new FileReader(path.toFile());
+        } catch (FileNotFoundException e) {
+          throw new RuntimeException(e);// TODO
+        }
+      }
+    }).collect(Collectors.toList());
+
+    return reources;
   }
 }

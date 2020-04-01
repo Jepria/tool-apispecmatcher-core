@@ -1,6 +1,5 @@
 package org.jepria.tools.apispecmatcher;
 
-import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -8,25 +7,16 @@ import java.util.List;
 
 public class MatcherImpl implements Matcher {
 
-  /**
-   * Local class (not a part of public API)
-   *
-   * Represents results of a single match between two method collections
-   */
-  protected static class MethodCollectionMatchResult {
-    public Collection<? extends ApiSpecMethod> nonImplementedMethods;
-    public Collection<? extends JaxrsMethod> nonDocumentedMethods;
-    public Collection<Pair<ApiSpecMethod, JaxrsMethod>> matchedMethods;
-  }
-
+  // not a part of public API
   protected static class MethodCollectionMatchParams {
     public Collection<ApiSpecMethod> apiSpecMethods;
     public Collection<JaxrsMethod> jaxrsMethods;
   }
 
-  protected MethodCollectionMatchResult match(MethodCollectionMatchParams params) {
+  // not a part of public API
+  protected MatchResult match(MethodCollectionMatchParams params) {
 
-    final MethodCollectionMatchResult result = new MethodCollectionMatchResult();
+    final MatchResult result = new MatchResult();
 
     // match and retain unmatched
     result.nonImplementedMethods = new ArrayList<>(params.apiSpecMethods);
@@ -45,10 +35,10 @@ public class MatcherImpl implements Matcher {
           apiSpecMethodIterator.remove();
           jaxrsMethodIterator.remove();
 
-          Pair<ApiSpecMethod, JaxrsMethod> pair = new Pair<>();
-          pair.x = apiSpecMethod;
-          pair.y = jaxrsMethod;
-          result.matchedMethods.add(pair);
+          MatchResult.MethodTuple tuple = new MatchResult.MethodTuple();
+          tuple.apiSpecMethod = apiSpecMethod;
+          tuple.jaxrsMethod = jaxrsMethod;
+          result.matchedMethods.add(tuple);
         }
       }
     }
@@ -75,37 +65,24 @@ public class MatcherImpl implements Matcher {
   @Override
   public MatchResult match(MatchParams params) {
 
-    final MatchResult result = new MatchResult();
-    result.nonImplementedMethods = new ArrayList<>();
-    result.nonDocumentedMethods = new ArrayList<>();
-
     ApiSpecMethodExtractor ext1 = new ApiSpecMethodExtractorJsonImpl();
     List<ApiSpecMethod> apiSpecMethods = new ArrayList<>();
-    for (Reader r: params.apiSpecsJson) {
+    for (Resource r: params.apiSpecsJson) {
       List<ApiSpecMethod> apiSpecMethodsForResource = ext1.extract(r);
-      result.nonImplementedMethods.add(apiSpecMethodsForResource);
       apiSpecMethods.addAll(apiSpecMethodsForResource);
     }
 
     JaxrsMethodExtractor ext2 = new JaxrsMethodExtractorImpl();
     List<JaxrsMethod> jaxrsMethods = new ArrayList<>();
-    for (Reader r: params.jaxrsAdaptersJava) {
+    for (Resource r: params.jaxrsAdaptersJava) {
       List<JaxrsMethod> jaxrsMethodsForResource = ext2.extract(r);
-      result.nonDocumentedMethods.add(jaxrsMethodsForResource);
       jaxrsMethods.addAll(jaxrsMethodsForResource);
     }
 
     MethodCollectionMatchParams mcmParams = new MethodCollectionMatchParams();
     mcmParams.apiSpecMethods = apiSpecMethods;
     mcmParams.jaxrsMethods = jaxrsMethods;
-    MethodCollectionMatchResult mcmResult = match(mcmParams);
-    for (Collection<ApiSpecMethod> apiSpecMethodsForResource: result.nonImplementedMethods) {
-      apiSpecMethodsForResource.retainAll(mcmResult.nonImplementedMethods);
-    }
-    for (Collection<JaxrsMethod> jaxrsMethodsForResource: result.nonDocumentedMethods) {
-      jaxrsMethodsForResource.retainAll(mcmResult.nonDocumentedMethods);
-    }
-
+    MatchResult result = match(mcmParams);
 
     return result;
   }

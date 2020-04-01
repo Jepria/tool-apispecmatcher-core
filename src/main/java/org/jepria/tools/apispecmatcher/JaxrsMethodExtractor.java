@@ -7,5 +7,5 @@ import java.util.List;
  * Extracts jaxrs methods from a resource
  */
 public interface JaxrsMethodExtractor {
-  List<JaxrsMethod> extract(Reader jaxrsAdapter);
+  List<JaxrsMethod> extract(Resource jaxrsAdapter);
 }

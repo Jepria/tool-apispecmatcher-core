@@ -1,10 +1,5 @@
-import org.jepria.tools.apispecmatcher.JaxrsMethod;
-import org.jepria.tools.apispecmatcher.JaxrsMethodExtractor;
-import org.jepria.tools.apispecmatcher.JaxrsMethodExtractorImpl;
+import org.jepria.tools.apispecmatcher.*;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.Reader;
 import java.util.List;
 
 public class JaxrsMethodExtractorTest {
@@ -12,13 +7,13 @@ public class JaxrsMethodExtractorTest {
     try {
 
 
-      final String jaxrsAdapterJavaPath = "C:\\work\\tool-apispec-matcher\\src\\test\\FeatureJaxrsAdapter.java";
+      final String jaxrsAdapterJavaPath = "C:\\work\\tool-apispec-matcher\\src\\test\\resources\\FeatureJaxrsAdapter.java";
+
+      final Resource jaxrsAdapterJavaResource = new ResourceFileImpl(jaxrsAdapterJavaPath);
 
       JaxrsMethodExtractor ext = new JaxrsMethodExtractorImpl();
-      List<JaxrsMethod> jaxrsMethods;
-      try (Reader reader = new FileReader(new File(jaxrsAdapterJavaPath))) {
-        jaxrsMethods = ext.extract(reader);
-      }
+      List<JaxrsMethod> jaxrsMethods = ext.extract(jaxrsAdapterJavaResource);
+
       for (JaxrsMethod jaxrsMethod: jaxrsMethods) {
         System.out.println(jaxrsMethod.httpMethod() + ":" + jaxrsMethod.path());
       }

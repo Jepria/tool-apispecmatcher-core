@@ -7,7 +7,7 @@ import com.github.javaparser.ast.body.MethodDeclaration;
  */
 public interface JaxrsMethod {
   // a sample stub method // TODO remove
-  MethodDeclaration method();
+  MethodDeclaration body();
   /**
    * GET, POST, etc
    *
@@ -19,7 +19,13 @@ public interface JaxrsMethod {
   String path();
 
   /**
-   * Location of the method (e.g. within a file)
+   * Containing resource
+   * @return
+   */
+  Resource resource();
+
+  /**
+   * Location of the method within the resource
    * @return
    */
   Location location();

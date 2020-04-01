@@ -12,7 +12,7 @@ public interface ApiSpecMethod {
    * @return
    */
   // a sample stub method // TODO remove
-  Map<String, Object> method();
+  Map<String, Object> body();
 
   /**
    * GET, POST, etc
@@ -25,7 +25,13 @@ public interface ApiSpecMethod {
   String path();
 
   /**
-   * Location of the method (e.g. within a file)
+   * Containing resource
+   * @return
+   */
+  Resource resource();
+
+  /**
+   * Location of the method within the resource
    *
    * @return
    */
