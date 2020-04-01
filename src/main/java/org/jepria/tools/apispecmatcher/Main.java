@@ -1,10 +1,7 @@
 package org.jepria.tools.apispecmatcher;
 
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.PrintStream;
-import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -116,26 +113,8 @@ public class Main {
       return null;
     }
 
-    List<Resource> reources = paths.stream().map(path -> new Resource() {
-      @Override
-      public Location location() {
-        return new Location() {
-          @Override
-          public String asString() {
-            return path.toString();
-          }
-        };
-      }
-      @Override
-      public Reader newReader() {
-        try {
-          return new FileReader(path.toFile());
-        } catch (FileNotFoundException e) {
-          throw new RuntimeException(e);// TODO
-        }
-      }
-    }).collect(Collectors.toList());
+    List<Resource> resources = paths.stream().map(path -> new ResourceFileImpl(path.toFile())).collect(Collectors.toList());
 
-    return reources;
+    return resources;
   }
 }
