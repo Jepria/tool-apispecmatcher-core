@@ -11,22 +11,17 @@ public class MatcherImpl implements Matcher {
   /**
    * Local class (not a part of public API)
    *
-   * Represents match results within a single pair of method sets
+   * Represents results of a single match between two method collections
    */
   protected static class MethodCollectionMatchResult {
-    /**
-     * modifications on the object reflect to its source
-     */
-    public Collection<? extends ApiSpecMethodExtractor.ApiSpecMethod> nonImplementedMethods;
-    /**
-     * modifications on the object reflect to its source
-     */
-    public Collection<? extends JaxrsMethodExtractor.JaxrsMethod> nonDocumentedMethods;
+    public Collection<? extends ApiSpecMethod> nonImplementedMethods;
+    public Collection<? extends JaxrsMethod> nonDocumentedMethods;
+    public Collection<Pair<ApiSpecMethod, JaxrsMethod>> matchedMethods;
   }
 
   protected static class MethodCollectionMatchParams {
-    public Collection<ApiSpecMethodExtractor.ApiSpecMethod> apiSpecMethods;
-    public Collection<JaxrsMethodExtractor.JaxrsMethod> jaxrsMethods;
+    public Collection<ApiSpecMethod> apiSpecMethods;
+    public Collection<JaxrsMethod> jaxrsMethods;
   }
 
   protected MethodCollectionMatchResult match(MethodCollectionMatchParams params) {
@@ -36,18 +31,24 @@ public class MatcherImpl implements Matcher {
     // match and retain unmatched
     result.nonImplementedMethods = new ArrayList<>(params.apiSpecMethods);
     result.nonDocumentedMethods = new ArrayList<>(params.jaxrsMethods);
+    result.matchedMethods = new ArrayList<>();
 
-    Iterator<? extends ApiSpecMethodExtractor.ApiSpecMethod> apiSpecMethodIterator = result.nonImplementedMethods.iterator();
+    Iterator<? extends ApiSpecMethod> apiSpecMethodIterator = result.nonImplementedMethods.iterator();
     while (apiSpecMethodIterator.hasNext()) {
-      ApiSpecMethodExtractor.ApiSpecMethod apiSpecMethod = apiSpecMethodIterator.next();
+      ApiSpecMethod apiSpecMethod = apiSpecMethodIterator.next();
 
-      Iterator<? extends JaxrsMethodExtractor.JaxrsMethod> jaxrsMethodIterator = result.nonDocumentedMethods.iterator();
+      Iterator<? extends JaxrsMethod> jaxrsMethodIterator = result.nonDocumentedMethods.iterator();
       while (jaxrsMethodIterator.hasNext()) {
-        JaxrsMethodExtractor.JaxrsMethod jaxrsMethod = jaxrsMethodIterator.next();
+        JaxrsMethod jaxrsMethod = jaxrsMethodIterator.next();
 
         if (matchMethods(jaxrsMethod, apiSpecMethod)) {
           apiSpecMethodIterator.remove();
           jaxrsMethodIterator.remove();
+
+          Pair<ApiSpecMethod, JaxrsMethod> pair = new Pair<>();
+          pair.x = apiSpecMethod;
+          pair.y = jaxrsMethod;
+          result.matchedMethods.add(pair);
         }
       }
     }
@@ -55,7 +56,7 @@ public class MatcherImpl implements Matcher {
     return result;
   }
 
-  protected boolean matchMethods(JaxrsMethodExtractor.JaxrsMethod jaxrsMethod, ApiSpecMethodExtractor.ApiSpecMethod apiSpecMethod) {
+  protected boolean matchMethods(JaxrsMethod jaxrsMethod, ApiSpecMethod apiSpecMethod) {
     return jaxrsMethod.httpMethod().equalsIgnoreCase(apiSpecMethod.httpMethod()) && matchPaths(jaxrsMethod.path(), apiSpecMethod.path());
   }
 
@@ -72,24 +73,24 @@ public class MatcherImpl implements Matcher {
   }
 
   @Override
-  public ResourceCollectionMatchResult match(ResourceCollectionMatchParams params) {
+  public MatchResult match(MatchParams params) {
 
-    final ResourceCollectionMatchResult result = new ResourceCollectionMatchResult();
+    final MatchResult result = new MatchResult();
     result.nonImplementedMethods = new ArrayList<>();
     result.nonDocumentedMethods = new ArrayList<>();
 
     ApiSpecMethodExtractor ext1 = new ApiSpecMethodExtractorJsonImpl();
-    List<ApiSpecMethodExtractor.ApiSpecMethod> apiSpecMethods = new ArrayList<>();
+    List<ApiSpecMethod> apiSpecMethods = new ArrayList<>();
     for (Reader r: params.apiSpecsJson) {
-      List<ApiSpecMethodExtractor.ApiSpecMethod> apiSpecMethodsForResource = ext1.extract(r);
+      List<ApiSpecMethod> apiSpecMethodsForResource = ext1.extract(r);
       result.nonImplementedMethods.add(apiSpecMethodsForResource);
       apiSpecMethods.addAll(apiSpecMethodsForResource);
     }
 
     JaxrsMethodExtractor ext2 = new JaxrsMethodExtractorImpl();
-    List<JaxrsMethodExtractor.JaxrsMethod> jaxrsMethods = new ArrayList<>();
+    List<JaxrsMethod> jaxrsMethods = new ArrayList<>();
     for (Reader r: params.jaxrsAdaptersJava) {
-      List<JaxrsMethodExtractor.JaxrsMethod> jaxrsMethodsForResource = ext2.extract(r);
+      List<JaxrsMethod> jaxrsMethodsForResource = ext2.extract(r);
       result.nonDocumentedMethods.add(jaxrsMethodsForResource);
       jaxrsMethods.addAll(jaxrsMethodsForResource);
     }
@@ -98,10 +99,10 @@ public class MatcherImpl implements Matcher {
     mcmParams.apiSpecMethods = apiSpecMethods;
     mcmParams.jaxrsMethods = jaxrsMethods;
     MethodCollectionMatchResult mcmResult = match(mcmParams);
-    for (Collection<ApiSpecMethodExtractor.ApiSpecMethod> apiSpecMethodsForResource: result.nonImplementedMethods) {
+    for (Collection<ApiSpecMethod> apiSpecMethodsForResource: result.nonImplementedMethods) {
       apiSpecMethodsForResource.retainAll(mcmResult.nonImplementedMethods);
     }
-    for (Collection<JaxrsMethodExtractor.JaxrsMethod> jaxrsMethodsForResource: result.nonDocumentedMethods) {
+    for (Collection<JaxrsMethod> jaxrsMethodsForResource: result.nonDocumentedMethods) {
       jaxrsMethodsForResource.retainAll(mcmResult.nonDocumentedMethods);
     }
 

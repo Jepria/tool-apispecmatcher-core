@@ -46,11 +46,14 @@ public class Main {
           failed = true;
           out.println("Incorrect file path [" + pathStr + "]: resolve exception");
         }
-        if (Files.isRegularFile(path)) {
-          apiSpecs.add(path);
-        } else {
+        if (!Files.exists(path)) {
+          failed = true;
+          out.println("Incorrect file path [" + pathStr + "]: file does not exist");
+        } else if (!Files.isRegularFile(path)) {
           failed = true;
           out.println("Incorrect file path [" + pathStr + "]: not a regular file");
+        } else {
+          apiSpecs.add(path);
         }
       }
 
@@ -64,11 +67,14 @@ public class Main {
           failed = true;
           out.println("Incorrect file path [" + pathStr + "]: resolve exception");
         }
-        if (Files.isRegularFile(path)) {
-          jaxrsAdapters.add(path);
-        } else {
+        if (!Files.exists(path)) {
+          failed = true;
+          out.println("Incorrect file path [" + pathStr + "]: file does not exist");
+        } else if (!Files.isRegularFile(path)) {
           failed = true;
           out.println("Incorrect file path [" + pathStr + "]: not a regular file");
+        } else {
+          jaxrsAdapters.add(path);
         }
       }
 
@@ -76,7 +82,7 @@ public class Main {
         return;
       }
 
-      Matcher.ResourceCollectionMatchResult matchResult;
+      Matcher.MatchResult matchResult;
 
       {
         final List<Reader> apiSpecReaders = new ArrayList<>();
@@ -90,7 +96,7 @@ public class Main {
           }
 
 
-          Matcher.ResourceCollectionMatchParams params = new Matcher.ResourceCollectionMatchParams(apiSpecReaders, jaxrsAdapterReaders);
+          Matcher.MatchParams params = new Matcher.MatchParams(apiSpecReaders, jaxrsAdapterReaders);
           matchResult = new MatcherImpl().match(params);
 
 
@@ -111,14 +117,14 @@ public class Main {
 
         if (!matchResult.nonDocumentedMethods.isEmpty()) {
           for (int i = 0; i < matchResult.nonDocumentedMethods.size(); i++) {
-            for (JaxrsMethodExtractor.JaxrsMethod nonDocumentedMethod: matchResult.nonDocumentedMethods.get(i)) {
+            for (JaxrsMethod nonDocumentedMethod: matchResult.nonDocumentedMethods.get(i)) {
               System.out.println("Non-documented method in file " + jaxrsAdapterPaths.get(i) + ": " + nonDocumentedMethod.httpMethod() + " " + nonDocumentedMethod.path());
             }
           }
         }
         if (!matchResult.nonImplementedMethods.isEmpty()) {
           for (int i = 0; i < matchResult.nonImplementedMethods.size(); i++) {
-            for (ApiSpecMethodExtractor.ApiSpecMethod nonImplementedMethod: matchResult.nonImplementedMethods.get(i)) {
+            for (ApiSpecMethod nonImplementedMethod: matchResult.nonImplementedMethods.get(i)) {
               System.out.println("Non-implemented method in file " + apiSpecPaths.get(i) + ": " + nonImplementedMethod.httpMethod() + " " + nonImplementedMethod.path());
             }
           }

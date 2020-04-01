@@ -58,17 +58,19 @@ public class JaxrsMethodExtractorImpl implements JaxrsMethodExtractor {
 
         final String httpMethodAnnotationValue0 = httpMethodAnnotationValue;
 
-        JaxrsMethodExtractor.JaxrsMethod jaxrsMethod = new JaxrsMethod() {
+        JaxrsMethod jaxrsMethod = new JaxrsMethod() {
+          @Override
+          public MethodDeclaration method() {
+            return method;
+          }
           @Override
           public String httpMethod() {
             return httpMethodAnnotationValue0;
           }
-
           @Override
           public String path() {
             return pathAnnotationValue;
           }
-
           @Override
           public Location location() {
             return null; // TODO provide location

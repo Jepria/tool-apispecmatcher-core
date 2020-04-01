@@ -28,7 +28,13 @@ public class ApiSpecMethodExtractorJsonImpl implements ApiSpecMethodExtractor {
 
           for (final String httpMethod: pathMap.keySet()) {
 
+            Map<String, Object> method = (Map<String, Object>) pathMap.get(httpMethod);
+
             ApiSpecMethod apiSpecMethod = new ApiSpecMethod() {
+              @Override
+              public Map<String, Object> method() {
+                return method;
+              }
               @Override
               public String httpMethod() {
                 return httpMethod;
@@ -38,7 +44,7 @@ public class ApiSpecMethodExtractorJsonImpl implements ApiSpecMethodExtractor {
                 return path;
               }
               @Override
-              public Location location() {
+              public ApiSpecMethod.Location location() {
                 return null; // TODO provide location
               }
             };

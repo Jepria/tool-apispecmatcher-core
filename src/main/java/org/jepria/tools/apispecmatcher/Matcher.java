@@ -6,22 +6,26 @@ import java.util.List;
 
 public interface Matcher {
 
-  class ResourceCollectionMatchResult {
-    public List<Collection<ApiSpecMethodExtractor.ApiSpecMethod>> nonImplementedMethods;
-    public List<Collection<JaxrsMethodExtractor.JaxrsMethod>> nonDocumentedMethods;
+  /**
+   * A single set of output values of matching
+   */
+  class MatchResult {
+    public List<Collection<ApiSpecMethod>> nonImplementedMethods;
+    public List<Collection<JaxrsMethod>> nonDocumentedMethods;
   }
 
-  class ResourceCollectionMatchParams {
+  /**
+   * A single set of input params for matching
+   */
+  class MatchParams {
     public List<Reader> apiSpecsJson;
     public List<Reader> jaxrsAdaptersJava;
 
-    public ResourceCollectionMatchParams() { this(null, null); }
-
-    public ResourceCollectionMatchParams(List<Reader> apiSpecsJson, List<Reader> jaxrsAdaptersJava) {
+    public MatchParams(List<Reader> apiSpecsJson, List<Reader> jaxrsAdaptersJava) {
       this.apiSpecsJson = apiSpecsJson;
       this.jaxrsAdaptersJava = jaxrsAdaptersJava;
     }
   }
 
-  ResourceCollectionMatchResult match(ResourceCollectionMatchParams params);
+  MatchResult match(MatchParams params);
 }

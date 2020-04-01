@@ -8,17 +8,4 @@ import java.util.List;
  */
 public interface ApiSpecMethodExtractor {
   List<ApiSpecMethod> extract(Reader apiSpec);
-
-  interface ApiSpecMethod extends Method {
-    /**
-     * GET, POST, etc
-     * @return
-     */
-    String httpMethod();
-
-    // TODO better Path?
-    String path();
-
-
-  }
 }
