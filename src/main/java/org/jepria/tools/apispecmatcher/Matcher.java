@@ -31,12 +31,12 @@ public interface Matcher {
    * A single set of input params for matching
    */
   class MatchParams {
-    public List<Resource> apiSpecsJson;
-    public List<Resource> jaxrsAdaptersJava;
+    public List<ApiSpecMethod> apiSpecMethods;
+    public List<JaxrsMethod> jaxrsMethods;
 
-    public MatchParams(List<Resource> apiSpecsJson, List<Resource> jaxrsAdaptersJava) {
-      this.apiSpecsJson = apiSpecsJson;
-      this.jaxrsAdaptersJava = jaxrsAdaptersJava;
+    public MatchParams(List<ApiSpecMethod> apiSpecMethods, List<JaxrsMethod> jaxrsMethods) {
+      this.apiSpecMethods = apiSpecMethods;
+      this.jaxrsMethods = jaxrsMethods;
     }
   }
 

@@ -1,6 +1,7 @@
 package org.jepria.tools.apispecmatcher;
 
 import com.github.javaparser.JavaParser;
+import com.github.javaparser.Position;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.BodyDeclaration;
@@ -79,7 +80,14 @@ public class JaxrsMethodExtractorImpl implements JaxrsMethodExtractor {
             }
             @Override
             public Location location() {
-              return null; // TODO provide location
+              return new Location() {
+                @Override
+                public String asString() {
+                  return method.getBegin().isPresent() ?
+                          ( "(" + method.getBegin().get().line + ":" + method.getBegin().get().column + ")" ) :
+                          "(?:?)";
+                }
+              };
             }
           };
 

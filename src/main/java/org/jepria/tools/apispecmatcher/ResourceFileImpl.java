@@ -14,7 +14,7 @@ public class ResourceFileImpl implements Resource {
   }
 
   public ResourceFileImpl(String file) {
-    this.file = new File(file);
+    this(new File(file));
   }
 
   @Override

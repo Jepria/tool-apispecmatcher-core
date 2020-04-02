@@ -81,10 +81,32 @@ public class Main {
         return;
       }
 
-      final List<Resource> apiSpecResources = pathsToResources(apiSpecs);
-      final List<Resource> jaxrsAdapterResources = pathsToResources(jaxrsAdapters);
 
-      Matcher.MatchParams params = new Matcher.MatchParams(apiSpecResources, jaxrsAdapterResources);
+      // get resources from files
+      List<Resource> apiSpecResources = apiSpecs.stream().map(path -> new ResourceFileImpl(path.toFile())).collect(Collectors.toList());
+      List<Resource> jaxrsAdapterResources = jaxrsAdapters.stream().map(path -> new ResourceFileImpl(path.toFile())).collect(Collectors.toList());
+
+
+      // extract methods from resources
+      List<ApiSpecMethod> apiSpecMethods;
+      List<JaxrsMethod> jaxrsMethods;
+      {
+        apiSpecMethods = new ArrayList<>();
+        ApiSpecMethodExtractor ext1 = new ApiSpecMethodExtractorJsonImpl();
+        for (Resource r : apiSpecResources) {
+          List<ApiSpecMethod> apiSpecMethodsForResource = ext1.extract(r);
+          apiSpecMethods.addAll(apiSpecMethodsForResource);
+        }
+        jaxrsMethods = new ArrayList<>();
+        JaxrsMethodExtractor ext2 = new JaxrsMethodExtractorImpl();
+        for (Resource r : jaxrsAdapterResources) {
+          List<JaxrsMethod> jaxrsMethodsForResource = ext2.extract(r);
+          jaxrsMethods.addAll(jaxrsMethodsForResource);
+        }
+      }
+
+
+      Matcher.MatchParams params = new Matcher.MatchParams(apiSpecMethods, jaxrsMethods);
       Matcher.MatchResult matchResult = new MatcherImpl().match(params);
 
       if (matchResult.nonDocumentedMethods != null && !matchResult.nonDocumentedMethods.isEmpty() ||
@@ -106,15 +128,5 @@ public class Main {
       }
 
     } catch (Throwable e) { throw new RuntimeException(e); }
-  }
-
-  protected static List<Resource> pathsToResources(List<Path> paths) {
-    if (paths == null) {
-      return null;
-    }
-
-    List<Resource> resources = paths.stream().map(path -> new ResourceFileImpl(path.toFile())).collect(Collectors.toList());
-
-    return resources;
   }
 }
