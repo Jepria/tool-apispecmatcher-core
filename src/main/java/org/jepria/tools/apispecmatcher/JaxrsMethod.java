@@ -1,13 +1,9 @@
 package org.jepria.tools.apispecmatcher;
 
-import com.github.javaparser.ast.body.MethodDeclaration;
-
 /**
  * A method represented in a Jaxrs implementation
  */
 public interface JaxrsMethod {
-  // a sample stub method // TODO remove
-  MethodDeclaration body();
   /**
    * GET, POST, etc
    *
@@ -17,15 +13,9 @@ public interface JaxrsMethod {
 
   // TODO better Path than String?
   String path();
-
   /**
-   * Containing resource
-   * @return
-   */
-  Resource resource();
-
-  /**
-   * Location of the method within the resource
+   * Location of the method and the containing resource
+   *
    * @return
    */
   Location location();

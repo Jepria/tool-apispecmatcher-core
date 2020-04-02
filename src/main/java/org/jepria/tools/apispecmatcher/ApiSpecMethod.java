@@ -25,13 +25,7 @@ public interface ApiSpecMethod {
   String path();
 
   /**
-   * Containing resource
-   * @return
-   */
-  Resource resource();
-
-  /**
-   * Location of the method within the resource
+   * Location of the method and the containing resource
    *
    * @return
    */

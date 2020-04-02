@@ -11,7 +11,7 @@ public class ApiSpecMethodExtractorTest {
 
       final Resource apiSpecJsonResource = new ResourceFileImpl(apiSpecJsonPath);
 
-      ApiSpecMethodExtractor parser = new ApiSpecMethodExtractorJsonImpl();
+      ApiSpecMethodExtractorJson parser = new ApiSpecMethodExtractorJson();
       List<ApiSpecMethod> apiSpecMethods = parser.extract(apiSpecJsonResource);
 
       for (ApiSpecMethod apiSpecMethod: apiSpecMethods) {

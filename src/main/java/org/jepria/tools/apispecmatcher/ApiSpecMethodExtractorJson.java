@@ -9,8 +9,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class ApiSpecMethodExtractorJsonImpl implements ApiSpecMethodExtractor {
-  @Override
+/**
+ * Extracts api spec methods from the json resource
+ */
+public class ApiSpecMethodExtractorJson {
+
   public List<ApiSpecMethod> extract(Resource apiSpec) {
 
     final List<ApiSpecMethod> result = new ArrayList<>();
@@ -46,12 +49,13 @@ public class ApiSpecMethodExtractorJsonImpl implements ApiSpecMethodExtractor {
                   return path;
                 }
                 @Override
-                public Resource resource() {
-                  return apiSpec;
-                }
-                @Override
-                public ApiSpecMethod.Location location() {
-                  return null; // TODO provide location
+                public Location location() {
+                  return new Location() {
+                    @Override
+                    public String asString() {
+                      return apiSpec.location().asString() + "(?)";
+                    }
+                  };
                 }
               };
 
