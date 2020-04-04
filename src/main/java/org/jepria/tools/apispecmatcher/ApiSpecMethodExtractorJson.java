@@ -6,6 +6,7 @@ import com.google.gson.reflect.TypeToken;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,36 +19,82 @@ public class ApiSpecMethodExtractorJson {
 
     final List<ApiSpecMethod> result = new ArrayList<>();
 
+    final Map<String, Object> map;
+
     try (Reader reader = apiSpec.newReader()) {
-      Map<String, Object> map = new Gson().fromJson(reader, new TypeToken<Map<String, Object>>(){}.getType());
+      map = new Gson().fromJson(reader, new TypeToken<Map<String, Object>>() {}.getType());
+    } catch (IOException e) {
+      throw new RuntimeException(e);//TODO
+    }
 
-      Object pathsObject = map.get("paths");
-      if (pathsObject instanceof Map) {
-        Map<String, Object> pathsMap = (Map<String, Object>) pathsObject;
+    Map<String, Object> pathsMap = (Map<String, Object>)map.get("paths");
+    if (pathsMap != null) {
+      for (final String path : pathsMap.keySet()) {
+        Map<String, Object> pathMap = (Map<String, Object>) pathsMap.get(path);
+        if (pathMap != null) {
+          for (final String httpMethod : pathMap.keySet()) {
+            Map<String, Object> methodMap = (Map<String, Object>) pathMap.get(httpMethod);
+            if (methodMap != null) {
 
-        for (final String path : pathsMap.keySet()) {
-          Object pathObject = pathsMap.get(path);
+              final Map<String, Object> requestBodySchema;
+              {
+                Map<String, Object> requestBodySchema0 = null;
+                Map<String, Object> requestBodyMap = (Map<String, Object>) methodMap.get("requestBody");
+                if (requestBodyMap != null) {
+                  Map<String, Object> contentMap = (Map<String, Object>) requestBodyMap.get("content");
+                  if (contentMap != null) {
+                    // TODO support multiple content elements? (now supported the first only)
+                    Map<String, Object> aContentMap = (Map<String, Object>) contentMap.get(contentMap.keySet().iterator().next());
+                    if (aContentMap != null) {
+                      Map<String, Object> requestBodySchemaMap = (Map<String, Object>) aContentMap.get("schema");
+                      requestBodySchema0 = OpenApiSchemaDeployer.deploySchema(requestBodySchemaMap, map);
+                    }
+                  }
+                }
+                requestBodySchema = requestBodySchema0;
+              }
 
-          if (pathObject instanceof Map) {
-            Map<String, Object> pathMap = (Map<String, Object>) pathObject;
+              // extract params
+              final List<ApiSpecMethod.Parameter> params = new ArrayList<>();
+              {
+                List<Map<String, Object>> parametersList = (List<Map<String, Object>>)methodMap.get("parameters");
+                if (parametersList != null) {
+                  for (Map<String, Object> parameterMap: parametersList) {
 
-            for (final String httpMethod : pathMap.keySet()) {
+                    Map<String, Object> schemaRoot = (Map<String, Object>)parameterMap.get("schema");
+                    final Map<String, Object> schema = OpenApiSchemaDeployer.deploySchema(schemaRoot, map);
+                    final String in = (String)parameterMap.get("in");
+                    final String name = (String)parameterMap.get("name");
 
-              Map<String, Object> method = (Map<String, Object>) pathMap.get(httpMethod);
+                    params.add(new ApiSpecMethod.Parameter() {
+                      @Override
+                      public Map<String, Object> schema() {
+                        return schema;
+                      }
+                      @Override
+                      public String in() {
+                        return in;
+                      }
+                      @Override
+                      public String name() {
+                        return name;
+                      }
+                    });
+                  }
+                }
+              }
 
               ApiSpecMethod apiSpecMethod = new ApiSpecMethod() {
-                @Override
-                public Map<String, Object> body() {
-                  return method;
-                }
                 @Override
                 public String httpMethod() {
                   return httpMethod;
                 }
+
                 @Override
                 public String path() {
                   return path;
                 }
+
                 @Override
                 public Location location() {
                   return new Location() {
@@ -57,6 +104,16 @@ public class ApiSpecMethodExtractorJson {
                     }
                   };
                 }
+
+                @Override
+                public List<Parameter> params() {
+                  return params;
+                }
+
+                @Override
+                public Map<String, Object> requestBodySchema() {
+                  return requestBodySchema;
+                }
               };
 
               result.add(apiSpecMethod);
@@ -64,8 +121,6 @@ public class ApiSpecMethodExtractorJson {
           }
         }
       }
-    } catch (IOException e) {
-      throw new RuntimeException(e);//TODO
     }
 
     return result;

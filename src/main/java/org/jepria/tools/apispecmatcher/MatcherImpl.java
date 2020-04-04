@@ -2,11 +2,88 @@ package org.jepria.tools.apispecmatcher;
 
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 public class MatcherImpl implements Matcher {
 
   protected boolean matchMethods(JaxrsMethod jaxrsMethod, ApiSpecMethod apiSpecMethod) {
-    return jaxrsMethod.httpMethod().equalsIgnoreCase(apiSpecMethod.httpMethod()) && matchPaths(jaxrsMethod.path(), apiSpecMethod.path());
+
+    if (!jaxrsMethod.httpMethod().equalsIgnoreCase(apiSpecMethod.httpMethod())) {
+      return false;
+    }
+
+    if (!matchPaths(jaxrsMethod.path(), apiSpecMethod.path())) {
+      return false;
+    }
+
+    List<JaxrsMethod.Parameter> jaxrsParams = jaxrsMethod.params();
+    List<ApiSpecMethod.Parameter> specParams = apiSpecMethod.params();
+    if (jaxrsParams.size() != specParams.size()) {
+      return false;
+    }
+    for (int i = 0; i < jaxrsParams.size(); i++) {
+      JaxrsMethod.Parameter jaxrsParam = jaxrsParams.get(i);
+      ApiSpecMethod.Parameter specParam = specParams.get(i);
+      if (!matchParams(jaxrsParam, specParam)) {
+        return false;
+      }
+    }
+
+
+    if (!matchRequestBodies(jaxrsMethod.requestBodyType(), apiSpecMethod.requestBodySchema())) {
+      return false;
+    }
+
+    return true;
+  }
+
+  protected boolean matchRequestBodies(Class<?> jaxrsRequestBodyType, Map<String, Object> specRequestBodySchema) {
+    if (jaxrsRequestBodyType == null && specRequestBodySchema == null) {
+      return true;
+    } else if (jaxrsRequestBodyType == null || specRequestBodySchema == null) {
+      return false;
+    }
+
+    Map<String, Object> jaxrsRequestBodySchema = OpenApiSchemaBuilder.buildSchema(jaxrsRequestBodyType);
+    if (!matchSchemas(jaxrsRequestBodySchema, specRequestBodySchema)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  protected boolean matchParams(JaxrsMethod.Parameter jaxrsParam, ApiSpecMethod.Parameter specParam) {
+    if (jaxrsParam == null && specParam == null) {
+      return true;
+    } else if (jaxrsParam == null || specParam == null) {
+      return false;
+    }
+
+    if ("Query".equals(jaxrsParam.in()) && !"query".equals(specParam.in())
+            || "Path".equals(jaxrsParam.in()) && !"path".equals(specParam.in())
+            || "Header".equals(jaxrsParam.in()) && !"header".equals(specParam.in())
+            || "Cookie".equals(jaxrsParam.in()) && !"cookie".equals(specParam.in())) {
+      return false;
+    }
+    // TODO match any other param ins (Matrix, Bean, Form)?
+
+    if (!jaxrsParam.name().equals(specParam.name())) {
+      return false;
+    }
+
+    Map<String, Object> jaxrsParamSchema = OpenApiSchemaBuilder.buildSchema(jaxrsParam.type());
+    Map<String, Object> specParamSchema = specParam.schema();
+    if (!matchSchemas(jaxrsParamSchema, specParamSchema)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  protected boolean matchSchemas(Map<String, Object> schema1, Map<String, Object> schema2) {
+    // TODO implement schema matching
+    return true;
   }
 
   protected boolean matchPaths(String path1, String path2) {

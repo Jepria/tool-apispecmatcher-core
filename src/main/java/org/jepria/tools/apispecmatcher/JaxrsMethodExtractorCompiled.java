@@ -5,6 +5,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -79,38 +80,125 @@ public class JaxrsMethodExtractorCompiled {
       String methodPathAnnotationValue = extractJaxrsPath(method);
       final String pathAnnotationValue = (classPathAnnotationValue != null ? classPathAnnotationValue : "") + (methodPathAnnotationValue != null ? methodPathAnnotationValue : "");
 
-      String httpMethodAnnotationValue = null;
+      final String httpMethod;
       {
+        String httpMethod0 = null;
         Annotation[] annotations = method.getDeclaredAnnotations();
         if (annotations != null) {
           for (Annotation annotation : annotations) {
             Class<? extends Annotation> annotationType = annotation.annotationType();
-            String annotationStr = annotationType.getSimpleName(); // TODO or check canonical names? or Classes?
+            String annotationStr = annotationType.getCanonicalName();
 
-            if ("DELETE".equals(annotationStr)
-                    || "GET".equals(annotationStr)
-                    || "HEAD".equals(annotationStr)
-                    || "OPTIONS".equals(annotationStr)
-                    || "POST".equals(annotationStr)
-                    || "PUT".equals(annotationStr)) {
+            if ("javax.ws.rs.DELETE".equals(annotationStr)
+                    || "javax.ws.rs.GET".equals(annotationStr)
+                    || "javax.ws.rs.HEAD".equals(annotationStr)
+                    || "javax.ws.rs.OPTIONS".equals(annotationStr)
+                    || "javax.ws.rs.POST".equals(annotationStr)
+                    || "javax.ws.rs.PUT".equals(annotationStr)) {
+              // retain simple name only
+              httpMethod0 = annotationStr.substring("javax.ws.rs.".length());
 
-              httpMethodAnnotationValue = annotationStr;
               break; //found the first
-
               // TODO check the only jaxrs annotation found on the method... or do not check it here?
             }
           }
         }
+        httpMethod = httpMethod0;
       }
 
-      if (httpMethodAnnotationValue != null) { // check httpMethod annotation only, path annotation might be null or empty
 
-        final String httpMethodAnnotationValue0 = httpMethodAnnotationValue;
+      if (httpMethod != null) { // check httpMethod annotation only, path annotation might be null or empty
+
+        final Class<?> requestBodyType;
+
+        // extract params
+        final List<JaxrsMethod.Parameter> params = new ArrayList<>();
+        {
+          Class<?> requestBodyType0 = null;
+
+          for (Parameter parameter: method.getParameters()) {
+            // extract param annotations
+
+            final String in;
+            final String name;
+            {
+              String in0 = null;
+              String name0 = null;
+              Annotation[] annotations = parameter.getAnnotations();
+              if (annotations != null) {
+                for (Annotation annotation : annotations) {
+                  Class<? extends Annotation> annotationType = annotation.annotationType();
+                  String annotationStr = annotationType.getCanonicalName();
+
+                  if ("javax.ws.rs.BeanParam".equals(annotationStr)) {
+                    throw new UnsupportedOperationException("javax.ws.rs.BeanParam is unsupported");// TODO specify param and method location in the exception
+                  }
+                  if ("javax.ws.rs.FormParam".equals(annotationStr)) {
+                    throw new UnsupportedOperationException("javax.ws.rs.FormParam is unsupported");// TODO specify param and method location in the exception
+                  }
+                  if ("javax.ws.rs.MatrixParam".equals(annotationStr)) {
+                    throw new UnsupportedOperationException("javax.ws.rs.MatrixParam is unsupported by OpenAPI 3.0");// TODO specify param and method location in the exception
+                  }
+
+                  if ("javax.ws.rs.QueryParam".equals(annotationStr)
+                          || "javax.ws.rs.PathParam".equals(annotationStr)
+                          || "javax.ws.rs.HeaderParam".equals(annotationStr)
+                          || "javax.ws.rs.CookieParam".equals(annotationStr)) {
+                    // retain simple name only
+                    in0 = annotationStr.substring("javax.ws.rs.".length(), annotationStr.length() - "Param".length());
+
+                    try {
+                      // invoke method value() on the annotation
+                      Object res = annotationType.getDeclaredMethod("value").invoke(annotation);
+                      name0 = (String) res;
+                    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+                      // impossible
+                      throw new RuntimeException(e);
+                    }
+
+                    break; //found the first
+                    // TODO check the only param annotation found on the parameter... or do not check it here?
+                  }
+                }
+              }
+
+              // for the body param both name and in variables are null
+              if (in0 == null && name0 == null) {
+                requestBodyType0 = parameter.getType();
+                // TODO check the only method param found as a body... or do not check it here?
+              }
+
+              name = name0;
+              in = in0;
+            }
+
+            if (name != null && in != null) { // otherwise this is a request body, not a method param
+              params.add(new JaxrsMethod.Parameter() {
+                @Override
+                public String name() {
+                  return name;
+                }
+
+                @Override
+                public String in() {
+                  return in;
+                }
+
+                @Override
+                public String type() {
+                  return parameter.getType().getCanonicalName();
+                }
+              });
+            }
+          }
+
+          requestBodyType = requestBodyType0;
+        }
 
         JaxrsMethod jaxrsMethod = new JaxrsMethod() {
           @Override
           public String httpMethod() {
-            return httpMethodAnnotationValue0;
+            return httpMethod;
           }
           @Override
           public String path() {
@@ -124,6 +212,14 @@ public class JaxrsMethodExtractorCompiled {
                 return jaxrsAdapterClassname + "(?:?)";
               }
             };
+          }
+          @Override
+          public List<Parameter> params() {
+            return params;
+          }
+          @Override
+          public Class<?> requestBodyType() {
+            return requestBodyType;
           }
         };
 
@@ -142,7 +238,7 @@ public class JaxrsMethodExtractorCompiled {
         if ("javax.ws.rs.Path".equals(annotationType.getCanonicalName())) {
           String pathValue;
           try {
-            // invoke method value() on the javax.ws.rs.Path annotation
+            // invoke method value() on the annotation
             Object res = annotationType.getDeclaredMethod("value").invoke(annotation);
             pathValue = (String) res;
           } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {

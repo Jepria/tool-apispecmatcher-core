@@ -37,12 +37,12 @@ public class Main {
           String jaxrsAdapterPathsArg = args[i];
           jaxrsAdapterPaths.addAll(Arrays.asList(jaxrsAdapterPathsArg.split("\\s*;\\s*")));
         } else if (args[i].equals("--project-classpath-class-dirs") && i < args.length - 1) {
-          // coma separated list of absolute paths to the class file hierarchy roots (e.g. .../target/classes dir in maven), required for loading jaxrs-adapter classes
+          // coma separated list of absolute paths to the class file hierarchy roots (e.g. target/classes dir in maven), required for loading jaxrs-adapter classes
           i++;
           String projectClasspathClassDirsArg = args[i];
           projectClasspathClassDirPaths.addAll(Arrays.asList(projectClasspathClassDirsArg.split("\\s*;\\s*")));
         } else if (args[i].equals("--project-classpath-jars-dirs") && i < args.length - 1) {
-          // coma separated list of absolute paths to the jar collection dirs (e.g. .../WEB-INF/lib dir in an exploded war), required for loading jaxrs-adapter classes
+          // coma separated list of absolute paths to the jar collection dirs (e.g. WEB-INF/lib dir in an exploded war), required for loading jaxrs-adapter classes
           i++;
           String projectClasspathJarDirsArg = args[i];
           projectClasspathJarDirPaths.addAll(Arrays.asList(projectClasspathJarDirsArg.split("\\s*;\\s*")));
@@ -191,12 +191,12 @@ public class Main {
 
         if (matchResult.nonDocumentedMethods != null && !matchResult.nonDocumentedMethods.isEmpty()) {
           for (JaxrsMethod nonDocumentedMethod: matchResult.nonDocumentedMethods) {
-            System.out.println("Non-documented method at " + nonDocumentedMethod.location().asString() + ": " + nonDocumentedMethod.httpMethod() + " " + nonDocumentedMethod.path());
+            System.out.println("Non-documented method at " + nonDocumentedMethod.location().asString() + ": " + nonDocumentedMethod.asString());
           }
         }
         if (matchResult.nonImplementedMethods != null && !matchResult.nonImplementedMethods.isEmpty()) {
           for (ApiSpecMethod nonImplementedMethod: matchResult.nonImplementedMethods) {
-            System.out.println("Non-implemented method at " + nonImplementedMethod.location().asString() + ": " + nonImplementedMethod.httpMethod() + " " + nonImplementedMethod.path());
+            System.out.println("Non-implemented method at " + nonImplementedMethod.location().asString() + ": " + nonImplementedMethod.asString());
           }
         }
       } else {
