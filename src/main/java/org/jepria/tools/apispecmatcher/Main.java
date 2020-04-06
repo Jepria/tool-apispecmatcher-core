@@ -1,8 +1,7 @@
 package org.jepria.tools.apispecmatcher;
 
 
-import java.io.File;
-import java.io.PrintStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -147,7 +146,13 @@ public class Main {
 
 
       // get resources from files
-      List<Resource> apiSpecResources = apiSpecs.stream().map(file -> new ResourceFileImpl(file)).collect(Collectors.toList());
+      List<Reader> apiSpecResources = apiSpecs.stream().map(file -> {
+        try {
+          return new FileReader(file);
+        } catch (FileNotFoundException e) {
+          throw new RuntimeException(e);
+        }
+      }).collect(Collectors.toList());
 
       // extract methods from resources
       List<ApiSpecMethod> apiSpecMethods;
@@ -155,8 +160,11 @@ public class Main {
       {
         apiSpecMethods = new ArrayList<>();
         ApiSpecMethodExtractorJson ext1 = new ApiSpecMethodExtractorJson();
-        for (Resource r : apiSpecResources) {
-          List<ApiSpecMethod> apiSpecMethodsForResource = ext1.extract(r);
+        for (Reader r : apiSpecResources) {
+          List<ApiSpecMethod> apiSpecMethodsForResource;
+          try (Reader r0 = r) {
+            apiSpecMethodsForResource = ext1.extract(r0);
+          }
           apiSpecMethods.addAll(apiSpecMethodsForResource);
         }
         jaxrsMethods = new ArrayList<>();

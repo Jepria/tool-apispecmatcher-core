@@ -3,10 +3,8 @@ package org.jepria.tools.apispecmatcher;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,17 +13,13 @@ import java.util.Map;
  */
 public class ApiSpecMethodExtractorJson {
 
-  public List<ApiSpecMethod> extract(Resource apiSpec) {
+  public List<ApiSpecMethod> extract(Reader spec) {
 
     final List<ApiSpecMethod> result = new ArrayList<>();
 
     final Map<String, Object> map;
 
-    try (Reader reader = apiSpec.newReader()) {
-      map = new Gson().fromJson(reader, new TypeToken<Map<String, Object>>() {}.getType());
-    } catch (IOException e) {
-      throw new RuntimeException(e);//TODO
-    }
+    map = new Gson().fromJson(spec, new TypeToken<Map<String, Object>>() {}.getType());
 
     Map<String, Object> pathsMap = (Map<String, Object>)map.get("paths");
     if (pathsMap != null) {
@@ -98,9 +92,8 @@ public class ApiSpecMethodExtractorJson {
                 @Override
                 public Location location() {
                   return new Location() {
-                    @Override
                     public String asString() {
-                      return apiSpec.location().asString() + "(?)";
+                      return "(?)";
                     }
                   };
                 }
