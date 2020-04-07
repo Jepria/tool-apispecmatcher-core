@@ -1,5 +1,7 @@
 package org.jepria.tools.apispecmatcher;
 
+import com.google.gson.GsonBuilder;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -82,8 +84,17 @@ public class MatcherImpl implements Matcher {
   }
 
   protected boolean matchSchemas(Map<String, Object> schema1, Map<String, Object> schema2) {
-    // TODO implement schema matching
-    return true;
+    if (schema1.equals(schema2)) { // try to match by simple equality
+      return true;
+    } else { // simple equality match failed, apply smart match
+      System.out.println();
+      System.out.println("///two schemas are not simply equal (but must be), apply smart match:");
+      System.out.println("///schema1:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema1));
+      System.out.println("///schema2:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema2));
+      System.out.println();
+      // TODO apply smart match
+      return false;
+    }
   }
 
   protected boolean matchPaths(String path1, String path2) {
