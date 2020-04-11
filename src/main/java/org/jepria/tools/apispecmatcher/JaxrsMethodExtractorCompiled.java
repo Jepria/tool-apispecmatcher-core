@@ -5,6 +5,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -116,7 +117,14 @@ public class JaxrsMethodExtractorCompiled {
         {
           Map<String, Object> requestBodySchema0 = null;
 
-          for (Parameter refParam: refMethod.getParameters()) {
+          Parameter[] refParams = refMethod.getParameters();
+          Type[] refParamGenTypes = refMethod.getGenericParameterTypes();
+          // assert refParams and refParamGenTypes are of the same length
+
+          for (int i = 0; i < refParams.length; i++) {
+            Parameter refParam = refParams[i];
+            Type refParamGenType = refParamGenTypes[i];
+
             // extract param annotations
 
             final String in;
@@ -164,7 +172,7 @@ public class JaxrsMethodExtractorCompiled {
 
               // for the body param both name and in variables are null
               if (in0 == null && name0 == null) {
-                requestBodySchema0 = OpenApiSchemaBuilder.buildSchema(refParam.getType());
+                requestBodySchema0 = buildSchema(refParamGenType);
                 // TODO check the only method param found as a body... or do not check it here?
               }
 
@@ -186,7 +194,7 @@ public class JaxrsMethodExtractorCompiled {
 
                 @Override
                 public Map<String, Object> schema() {
-                  return OpenApiSchemaBuilder.buildSchema(refParam.getType());
+                  return buildSchema(refParam.getType());
                 }
               });
             }
@@ -252,4 +260,7 @@ public class JaxrsMethodExtractorCompiled {
     return null;
   }
 
+  protected Map<String, Object> buildSchema(Type type) {
+    return OpenApiSchemaBuilder.buildSchema(type);
+  }
 }

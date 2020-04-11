@@ -8,6 +8,8 @@ import com.fasterxml.jackson.module.jsonSchema.JsonSchema;
 import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator;
 
 import java.io.IOException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Map;
 
 public class OpenApiSchemaBuilder {
@@ -22,6 +24,30 @@ public class OpenApiSchemaBuilder {
     return buildSchema(type);
   }
 
+
+  public static Map<String, Object> buildSchema(Type type) {
+    if (type instanceof Class) {
+      return buildSchema((Class<?>) type);
+    } else if (type instanceof ParameterizedType) {
+      return buildSchema((ParameterizedType) type);
+    } else {
+      throw new IllegalArgumentException("Unsupported type of [" + type + "]: "
+              + (type == null ? "" : type.getClass().getCanonicalName()));
+    }
+  }
+
+  public static Map<String, Object> buildSchema(ParameterizedType type) {
+    // for the parameterized type A<B,C>: type.getRawType() is A; type.getActualTypeArguments() is [B, C].
+
+    // TODO build schema for the parameterized type; fallback below:
+    return buildSchema((Class<?>)type.getRawType());
+  }
+
+  /**
+   *
+   * @param type simple non-parameterized Class
+   * @return
+   */
   public static Map<String, Object> buildSchema(Class<?> type) {
     ObjectMapper mapper = new ObjectMapper();
     mapper.setVisibility(mapper.getSerializationConfig().getDefaultVisibilityChecker()
