@@ -194,6 +194,11 @@ public class JaxrsMethodExtractorStatic {
           public Map<String, Object> requestBodySchema() {
             return requestBodySchema;
           }
+
+          @Override
+          public Map<String, Object> responseBodySchema() {
+            return null; // TODO
+          }
         };
 
         result.add(jaxrsMethod);

@@ -78,6 +78,35 @@ public class ApiSpecMethodExtractorJson {
                 }
               }
 
+              final Map<String, Object> responseBodySchema;
+              {
+                Map<String, Object> responseBodySchema0 = null;
+                Map<String, Object> responsesMap = (Map<String, Object>) methodMap.get("responses");
+                if (responsesMap != null) {
+                  Map<String, Object> response200Map = (Map<String, Object>) responsesMap.get("200");
+                  if (response200Map != null) {
+                    Map<String, Object> contentMap = (Map<String, Object>) response200Map.get("content");
+                    if (contentMap != null) {
+                      Map<String, Object> theContentMap = null;
+                      for (String contentType: contentMap.keySet()) {
+                        if ("application/json".equals(contentType) || contentType.startsWith("application/json;")) {
+                          theContentMap = (Map<String, Object>) contentMap.get(contentType);
+                          break; // TODO support other content types?
+                        }
+                      }
+                      if (theContentMap != null) {
+                        Map<String, Object> schemaMap = (Map<String, Object>) theContentMap.get("schema");
+                        if (schemaMap != null) {
+                          responseBodySchema0 = OpenApiSchemaDeployer.deploySchema(schemaMap, map);
+                        }
+                      }
+                    }
+                  }
+                }
+                responseBodySchema = responseBodySchema0;
+              }
+
+
               Method method = new Method() {
                 @Override
                 public String httpMethod() {
@@ -106,6 +135,11 @@ public class ApiSpecMethodExtractorJson {
                 @Override
                 public Map<String, Object> requestBodySchema() {
                   return requestBodySchema;
+                }
+
+                @Override
+                public Map<String, Object> responseBodySchema() {
+                  return responseBodySchema;
                 }
               };
 
