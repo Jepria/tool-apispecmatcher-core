@@ -1,5 +1,5 @@
-import org.jepria.tools.apispecmatcher.JaxrsMethod;
 import org.jepria.tools.apispecmatcher.JaxrsMethodExtractorCompiled;
+import org.jepria.tools.apispecmatcher.Method;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -22,9 +22,9 @@ public class JaxrsMethodExtractorCompiledTest {
       }
       jarFiles.add(servletJar);
       JaxrsMethodExtractorCompiled ext = new JaxrsMethodExtractorCompiled(null, jarFiles);
-      List<JaxrsMethod> jaxrsMethods = ext.extract(jaxrsAdapterClassname);
+      List<Method> jaxrsMethods = ext.extract(jaxrsAdapterClassname);
 
-      for (JaxrsMethod jaxrsMethod: jaxrsMethods) {
+      for (Method jaxrsMethod: jaxrsMethods) {
         System.out.println(jaxrsMethod.asString());
       }
 

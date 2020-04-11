@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class MatcherImpl implements Matcher {
 
-  protected boolean matchMethods(JaxrsMethod jaxrsMethod, ApiSpecMethod apiSpecMethod) {
+  protected boolean matchMethods(Method jaxrsMethod, Method apiSpecMethod) {
 
     if (!jaxrsMethod.httpMethod().equalsIgnoreCase(apiSpecMethod.httpMethod())) {
       return false;
@@ -17,35 +17,34 @@ public class MatcherImpl implements Matcher {
       return false;
     }
 
-    List<JaxrsMethod.Parameter> jaxrsParams = jaxrsMethod.params();
-    List<ApiSpecMethod.Parameter> specParams = apiSpecMethod.params();
+    List<Method.Parameter> jaxrsParams = jaxrsMethod.params();
+    List<Method.Parameter> specParams = apiSpecMethod.params();
     if (jaxrsParams.size() != specParams.size()) {
       return false;
     }
     for (int i = 0; i < jaxrsParams.size(); i++) {
-      JaxrsMethod.Parameter jaxrsParam = jaxrsParams.get(i);
-      ApiSpecMethod.Parameter specParam = specParams.get(i);
+      Method.Parameter jaxrsParam = jaxrsParams.get(i);
+      Method.Parameter specParam = specParams.get(i);
       if (!matchParams(jaxrsParam, specParam)) {
         return false;
       }
     }
 
 
-    if (!matchRequestBodies(jaxrsMethod.requestBodyType(), apiSpecMethod.requestBodySchema())) {
+    if (!matchRequestBodies(jaxrsMethod.requestBodySchema(), apiSpecMethod.requestBodySchema())) {
       return false;
     }
 
     return true;
   }
 
-  protected boolean matchRequestBodies(Class<?> jaxrsRequestBodyType, Map<String, Object> specRequestBodySchema) {
-    if (jaxrsRequestBodyType == null && specRequestBodySchema == null) {
+  protected boolean matchRequestBodies(Map<String, Object> jaxrsRequestBodySchema, Map<String, Object> specRequestBodySchema) {
+    if (jaxrsRequestBodySchema == null && specRequestBodySchema == null) {
       return true;
-    } else if (jaxrsRequestBodyType == null || specRequestBodySchema == null) {
+    } else if (jaxrsRequestBodySchema == null || specRequestBodySchema == null) {
       return false;
     }
 
-    Map<String, Object> jaxrsRequestBodySchema = OpenApiSchemaBuilder.buildSchema(jaxrsRequestBodyType);
     if (!matchSchemas(jaxrsRequestBodySchema, specRequestBodySchema)) {
       return false;
     }
@@ -53,7 +52,7 @@ public class MatcherImpl implements Matcher {
     return true;
   }
 
-  protected boolean matchParams(JaxrsMethod.Parameter jaxrsParam, ApiSpecMethod.Parameter specParam) {
+  protected boolean matchParams(Method.Parameter jaxrsParam, Method.Parameter specParam) {
     if (jaxrsParam == null && specParam == null) {
       return true;
     } else if (jaxrsParam == null || specParam == null) {
@@ -72,7 +71,7 @@ public class MatcherImpl implements Matcher {
       return false;
     }
 
-    Map<String, Object> jaxrsParamSchema = OpenApiSchemaBuilder.buildSchema(jaxrsParam.type());
+    Map<String, Object> jaxrsParamSchema = jaxrsParam.schema();
     Map<String, Object> specParamSchema = specParam.schema();
     if (!matchSchemas(jaxrsParamSchema, specParamSchema)) {
       return false;
@@ -110,13 +109,13 @@ public class MatcherImpl implements Matcher {
     result.nonDocumentedMethods = new ArrayList<>(params.jaxrsMethods);
     result.matchedMethods = new ArrayList<>();
 
-    Iterator<? extends ApiSpecMethod> apiSpecMethodIterator = result.nonImplementedMethods.iterator();
+    Iterator<? extends Method> apiSpecMethodIterator = result.nonImplementedMethods.iterator();
     while (apiSpecMethodIterator.hasNext()) {
-      ApiSpecMethod apiSpecMethod = apiSpecMethodIterator.next();
+      Method apiSpecMethod = apiSpecMethodIterator.next();
 
-      Iterator<? extends JaxrsMethod> jaxrsMethodIterator = result.nonDocumentedMethods.iterator();
+      Iterator<? extends Method> jaxrsMethodIterator = result.nonDocumentedMethods.iterator();
       while (jaxrsMethodIterator.hasNext()) {
-        JaxrsMethod jaxrsMethod = jaxrsMethodIterator.next();
+        Method jaxrsMethod = jaxrsMethodIterator.next();
 
         if (matchMethods(jaxrsMethod, apiSpecMethod)) {
           apiSpecMethodIterator.remove();

@@ -14,15 +14,16 @@ import com.github.javaparser.ast.expr.StringLiteralExpr;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Extracts jaxrs methods from the set of java sources
  */
 public class JaxrsMethodExtractorStatic {
 
-  public List<JaxrsMethod> extract(Reader jaxrsAdapterJava) {
+  public List<Method> extract(Reader jaxrsAdapterJava) {
 
-    final List<JaxrsMethod> result = new ArrayList<>();
+    final List<Method> result = new ArrayList<>();
 
     CompilationUnit cu = JavaParser.parse(jaxrsAdapterJava);
     NodeList<TypeDeclaration<?>> types = cu.getTypes();
@@ -72,10 +73,10 @@ public class JaxrsMethodExtractorStatic {
 
       if (httpMethodAnnotationValue != null) { // check httpMethod annotation only, path annotation might be null or empty
 
-        final String requestBodyType;
-        final List<JaxrsMethod.Parameter> params = new ArrayList<>();
+        final Map<String, Object> requestBodySchema;
+        final List<Method.Parameter> params = new ArrayList<>();
         {
-          String requestBodyType0 = null;
+          Map<String, Object> requestBodySchema0 = null;
 
           for (Parameter parameter : method.getParameters()) {
             // extract param annotations
@@ -130,7 +131,7 @@ public class JaxrsMethodExtractorStatic {
 
               // for the body param both name and in variables are null
               if (in0 == null && name0 == null) {
-                requestBodyType0 = parameter.getType().getClass().getCanonicalName();
+                requestBodySchema0 = OpenApiSchemaBuilder.buildSchema(parameter.getType().getClass());
                 // TODO check the only method param found as a body... or do not check it here?
               }
 
@@ -139,7 +140,7 @@ public class JaxrsMethodExtractorStatic {
             }
 
             if (name != null && in != null) { // otherwise this is a request body, not a method param
-              params.add(new JaxrsMethod.Parameter() {
+              params.add(new Method.Parameter() {
                 @Override
                 public String name() {
                   return name;
@@ -151,17 +152,17 @@ public class JaxrsMethodExtractorStatic {
                 }
 
                 @Override
-                public String type() {
-                  return parameter.getType().getClass().getCanonicalName();
+                public Map<String, Object> schema() {
+                  return OpenApiSchemaBuilder.buildSchema(parameter.getType().getClass());
                 }
               });
             }
           }
 
-          requestBodyType = requestBodyType0;
+          requestBodySchema = requestBodySchema0;
         }
 
-        JaxrsMethod jaxrsMethod = new JaxrsMethod() {
+        Method jaxrsMethod = new Method() {
           @Override
           public String httpMethod() {
             return httpMethodAnnotationValue;
@@ -190,8 +191,8 @@ public class JaxrsMethodExtractorStatic {
           }
 
           @Override
-          public Class<?> requestBodyType() {
-            return null; // requestBodyType; // TODO convert from String to Class or declare JaxrsMethod.requestBodyType as returning String
+          public Map<String, Object> requestBodySchema() {
+            return requestBodySchema;
           }
         };
 

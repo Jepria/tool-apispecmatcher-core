@@ -13,9 +13,9 @@ import java.util.Map;
  */
 public class ApiSpecMethodExtractorJson {
 
-  public List<ApiSpecMethod> extract(Reader spec) {
+  public List<Method> extract(Reader spec) {
 
-    final List<ApiSpecMethod> result = new ArrayList<>();
+    final List<Method> result = new ArrayList<>();
 
     final Map<String, Object> map;
 
@@ -49,7 +49,7 @@ public class ApiSpecMethodExtractorJson {
               }
 
               // extract params
-              final List<ApiSpecMethod.Parameter> params = new ArrayList<>();
+              final List<Method.Parameter> params = new ArrayList<>();
               {
                 List<Map<String, Object>> parametersList = (List<Map<String, Object>>)methodMap.get("parameters");
                 if (parametersList != null) {
@@ -60,7 +60,7 @@ public class ApiSpecMethodExtractorJson {
                     final String in = (String)parameterMap.get("in");
                     final String name = (String)parameterMap.get("name");
 
-                    params.add(new ApiSpecMethod.Parameter() {
+                    params.add(new Method.Parameter() {
                       @Override
                       public Map<String, Object> schema() {
                         return schema;
@@ -78,7 +78,7 @@ public class ApiSpecMethodExtractorJson {
                 }
               }
 
-              ApiSpecMethod apiSpecMethod = new ApiSpecMethod() {
+              Method method = new Method() {
                 @Override
                 public String httpMethod() {
                   return httpMethod;
@@ -109,7 +109,7 @@ public class ApiSpecMethodExtractorJson {
                 }
               };
 
-              result.add(apiSpecMethod);
+              result.add(method);
             }
           }
         }

@@ -4,11 +4,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A method represented in an api spec resource
+ * A method represented in an api spec resource or in a jaxrs adapter
  */
-public interface ApiSpecMethod {
+public interface Method {
   /**
-   * One of get, post, put, delete, head, options
+   * One of GET, POST, PUT, DELETE, HEAD, OPTIONS
    *
    * @return
    */
@@ -35,12 +35,12 @@ public interface ApiSpecMethod {
 
   interface Parameter {
     /**
-     * OpenAPI schema, as-is from json spec
+     * OpenAPI schema, as-is from json spec or built from the java type
      */
     Map<String, Object> schema();
     /**
      * NonNull
-     * One of query, path, header, cookie
+     * One of Query, Path, Header, Cookie
      */
     String in();
 
@@ -58,7 +58,7 @@ public interface ApiSpecMethod {
   List<Parameter> params();
 
   /**
-   * {@code null} if the method has no request body
+   * OpenAPI schema, as-is from json spec or built from the java type, {@code null} if the method has no request body
    * @return
    */
   Map<String, Object> requestBodySchema();

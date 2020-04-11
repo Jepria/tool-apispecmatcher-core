@@ -155,13 +155,13 @@ public class Main {
       }).collect(Collectors.toList());
 
       // extract methods from resources
-      List<ApiSpecMethod> apiSpecMethods;
-      List<JaxrsMethod> jaxrsMethods;
+      List<Method> apiSpecMethods;
+      List<Method> jaxrsMethods;
       {
         apiSpecMethods = new ArrayList<>();
         ApiSpecMethodExtractorJson ext1 = new ApiSpecMethodExtractorJson();
         for (Reader r : apiSpecResources) {
-          List<ApiSpecMethod> apiSpecMethodsForResource;
+          List<Method> apiSpecMethodsForResource;
           try (Reader r0 = r) {
             apiSpecMethodsForResource = ext1.extract(r0);
           }
@@ -184,7 +184,7 @@ public class Main {
         }
 
         for (String r : jaxrsAdapterPaths) {
-          List<JaxrsMethod> jaxrsMethodsForResource = ext2.extract(r);
+          List<Method> jaxrsMethodsForResource = ext2.extract(r);
           jaxrsMethods.addAll(jaxrsMethodsForResource);
         }
       }
@@ -198,12 +198,12 @@ public class Main {
         System.out.println("Match failed");
 
         if (matchResult.nonDocumentedMethods != null && !matchResult.nonDocumentedMethods.isEmpty()) {
-          for (JaxrsMethod nonDocumentedMethod: matchResult.nonDocumentedMethods) {
+          for (Method nonDocumentedMethod: matchResult.nonDocumentedMethods) {
             System.out.println("Non-documented method at " + nonDocumentedMethod.location().asString() + ": " + nonDocumentedMethod.asString());
           }
         }
         if (matchResult.nonImplementedMethods != null && !matchResult.nonImplementedMethods.isEmpty()) {
-          for (ApiSpecMethod nonImplementedMethod: matchResult.nonImplementedMethods) {
+          for (Method nonImplementedMethod: matchResult.nonImplementedMethods) {
             System.out.println("Non-implemented method at " + nonImplementedMethod.location().asString() + ": " + nonImplementedMethod.asString());
           }
         }

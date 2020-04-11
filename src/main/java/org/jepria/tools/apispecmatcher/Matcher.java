@@ -15,15 +15,15 @@ public interface Matcher {
     /**
      * List of specification methods which do not have corresponding implementation
      */
-    public List<ApiSpecMethod> nonImplementedMethods;
+    public List<Method> nonImplementedMethods;
     /**
      * List of jaxrs methods which do not have corresponding specification (documentation)
      */
-    public List<JaxrsMethod> nonDocumentedMethods;
+    public List<Method> nonDocumentedMethods;
 
     static class MethodTuple {
-      public ApiSpecMethod apiSpecMethod;
-      public JaxrsMethod jaxrsMethod;
+      public Method apiSpecMethod;
+      public Method jaxrsMethod;
     }
   }
 
@@ -31,10 +31,10 @@ public interface Matcher {
    * A single set of input params for matching
    */
   class MatchParams {
-    public List<ApiSpecMethod> apiSpecMethods;
-    public List<JaxrsMethod> jaxrsMethods;
+    public List<Method> apiSpecMethods;
+    public List<Method> jaxrsMethods;
 
-    public MatchParams(List<ApiSpecMethod> apiSpecMethods, List<JaxrsMethod> jaxrsMethods) {
+    public MatchParams(List<Method> apiSpecMethods, List<Method> jaxrsMethods) {
       this.apiSpecMethods = apiSpecMethods;
       this.jaxrsMethods = jaxrsMethods;
     }
