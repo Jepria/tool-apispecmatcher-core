@@ -37,11 +37,18 @@ public class ApiSpecMethodExtractorJson {
                 if (requestBodyMap != null) {
                   Map<String, Object> contentMap = (Map<String, Object>) requestBodyMap.get("content");
                   if (contentMap != null) {
-                    // TODO support multiple content elements? (now supported the first only)
-                    Map<String, Object> aContentMap = (Map<String, Object>) contentMap.get(contentMap.keySet().iterator().next());
-                    if (aContentMap != null) {
-                      Map<String, Object> requestBodySchemaMap = (Map<String, Object>) aContentMap.get("schema");
-                      requestBodySchema0 = OpenApiSchemaDeployer.deploySchema(requestBodySchemaMap, map);
+                    Map<String, Object> theContentMap = null;
+                    for (String contentType: contentMap.keySet()) {
+                      if ("application/json".equals(contentType) || contentType.startsWith("application/json;")) {
+                        theContentMap = (Map<String, Object>) contentMap.get(contentType);
+                        break; // TODO support other content types?
+                      }
+                    }
+                    if (theContentMap != null) {
+                      Map<String, Object> schemaMap = (Map<String, Object>) theContentMap.get("schema");
+                      if (schemaMap != null) {
+                        requestBodySchema0 = OpenApiSchemaDeployer.deploySchema(schemaMap, map);
+                      }
                     }
                   }
                 }
