@@ -1,5 +1,5 @@
-import org.jepria.tools.apispecmatcher.JaxrsMethod;
 import org.jepria.tools.apispecmatcher.JaxrsMethodExtractorStatic;
+import org.jepria.tools.apispecmatcher.Method;
 
 import java.io.File;
 import java.io.FileReader;
@@ -13,12 +13,12 @@ public class JaxrsMethodExtractorStaticTest {
       File jaxrsAdapterJavaFile = new File("C:\\work\\jepria-showcase\\module\\JepRiaShowcase\\App\\service-rest\\src\\main\\java\\com\\technology\\jep\\jepriashowcase\\feature\\rest\\FeatureJaxrsAdapter.java");
 
       JaxrsMethodExtractorStatic ext = new JaxrsMethodExtractorStatic();
-      List<JaxrsMethod> jaxrsMethods;
+      List<Method> jaxrsMethods;
       try (Reader r = new FileReader(jaxrsAdapterJavaFile)) {
         jaxrsMethods = ext.extract(r);
       }
 
-      for (JaxrsMethod jaxrsMethod: jaxrsMethods) {
+      for (Method jaxrsMethod: jaxrsMethods) {
         System.out.println(jaxrsMethod.asString());
       }
 

@@ -4,13 +4,14 @@ import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Extracts jaxrs methods from the set of compiled java classes
@@ -61,9 +62,9 @@ public class JaxrsMethodExtractorCompiled {
     this.classLoader = classLoader;
   }
 
-  public List<JaxrsMethod> extract(String jaxrsAdapterClassname) {
+  public List<Method> extract(String jaxrsAdapterClassname) {
 
-    final List<JaxrsMethod> result = new ArrayList<>();
+    final List<Method> result = new ArrayList<>();
 
     final Class<?> clazz;
     try {
@@ -74,16 +75,16 @@ public class JaxrsMethodExtractorCompiled {
 
     String classPathAnnotationValue = extractJaxrsPath(clazz);
 
-    for (Method method: clazz.getDeclaredMethods()) {
+    for (java.lang.reflect.Method refMethod: clazz.getDeclaredMethods()) {
 
       // nullablle
-      String methodPathAnnotationValue = extractJaxrsPath(method);
+      String methodPathAnnotationValue = extractJaxrsPath(refMethod);
       final String pathAnnotationValue = (classPathAnnotationValue != null ? classPathAnnotationValue : "") + (methodPathAnnotationValue != null ? methodPathAnnotationValue : "");
 
       final String httpMethod;
       {
         String httpMethod0 = null;
-        Annotation[] annotations = method.getDeclaredAnnotations();
+        Annotation[] annotations = refMethod.getDeclaredAnnotations();
         if (annotations != null) {
           for (Annotation annotation : annotations) {
             Class<? extends Annotation> annotationType = annotation.annotationType();
@@ -109,14 +110,21 @@ public class JaxrsMethodExtractorCompiled {
 
       if (httpMethod != null) { // check httpMethod annotation only, path annotation might be null or empty
 
-        final Class<?> requestBodyType;
+        final Map<String, Object> requestBodySchema;
 
         // extract params
-        final List<JaxrsMethod.Parameter> params = new ArrayList<>();
+        final List<Method.Parameter> params = new ArrayList<>();
         {
-          Class<?> requestBodyType0 = null;
+          Map<String, Object> requestBodySchema0 = null;
 
-          for (Parameter parameter: method.getParameters()) {
+          Parameter[] refParams = refMethod.getParameters();
+          Type[] refParamGenTypes = refMethod.getGenericParameterTypes();
+          // assert refParams and refParamGenTypes are of the same length
+
+          for (int i = 0; i < refParams.length; i++) {
+            Parameter refParam = refParams[i];
+            Type refParamGenType = refParamGenTypes[i];
+
             // extract param annotations
 
             final String in;
@@ -124,7 +132,7 @@ public class JaxrsMethodExtractorCompiled {
             {
               String in0 = null;
               String name0 = null;
-              Annotation[] annotations = parameter.getAnnotations();
+              Annotation[] annotations = refParam.getAnnotations();
               if (annotations != null) {
                 for (Annotation annotation : annotations) {
                   Class<? extends Annotation> annotationType = annotation.annotationType();
@@ -164,7 +172,7 @@ public class JaxrsMethodExtractorCompiled {
 
               // for the body param both name and in variables are null
               if (in0 == null && name0 == null) {
-                requestBodyType0 = parameter.getType();
+                requestBodySchema0 = buildSchema(refParamGenType);
                 // TODO check the only method param found as a body... or do not check it here?
               }
 
@@ -173,7 +181,7 @@ public class JaxrsMethodExtractorCompiled {
             }
 
             if (name != null && in != null) { // otherwise this is a request body, not a method param
-              params.add(new JaxrsMethod.Parameter() {
+              params.add(new Method.Parameter() {
                 @Override
                 public String name() {
                   return name;
@@ -185,17 +193,17 @@ public class JaxrsMethodExtractorCompiled {
                 }
 
                 @Override
-                public String type() {
-                  return parameter.getType().getCanonicalName();
+                public Map<String, Object> schema() {
+                  return buildSchema(refParam.getType());
                 }
               });
             }
           }
 
-          requestBodyType = requestBodyType0;
+          requestBodySchema = requestBodySchema0;
         }
 
-        JaxrsMethod jaxrsMethod = new JaxrsMethod() {
+        Method method = new Method() {
           @Override
           public String httpMethod() {
             return httpMethod;
@@ -218,12 +226,12 @@ public class JaxrsMethodExtractorCompiled {
             return params;
           }
           @Override
-          public Class<?> requestBodyType() {
-            return requestBodyType;
+          public Map<String, Object> requestBodySchema() {
+            return requestBodySchema;
           }
         };
 
-        result.add(jaxrsMethod);
+        result.add(method);
       }
     }
 
@@ -252,4 +260,7 @@ public class JaxrsMethodExtractorCompiled {
     return null;
   }
 
+  protected Map<String, Object> buildSchema(Type type) {
+    return OpenApiSchemaBuilder.buildSchema(type);
+  }
 }
