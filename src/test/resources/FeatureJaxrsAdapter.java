@@ -82,6 +82,9 @@ public class FeatureJaxrsAdapter extends JaxrsAdapterBase {
   @POST
   @Path("/search")
   public Response postSearch(SearchRequestDto<FeatureSearchDto> searchRequestDto,
+                             org.jepria.server.data.SearchRequestDto<FeatureSearchDto> searchRequestDto2,
+                             SearchRequestDto searchRequestDto3,
+                             org.jepria.server.data.SearchRequestDto searchRequestDto4,
                              @Pattern(regexp = "(resultset/paged-by-\\d+/\\d+)|(resultset\\?pageSize\\d+&page=\\d+)|(resultset\\?page=\\d+&pageSize=\\d+)", message = "Bad Extended-Response header value")
                              @HeaderParam(ExtendedResponse.REQUEST_HEADER_NAME) String extendedResponse,
                              @HeaderParam("Cache-Control") String cacheControl) {

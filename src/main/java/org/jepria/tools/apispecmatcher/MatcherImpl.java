@@ -35,6 +35,10 @@ public class MatcherImpl implements Matcher {
       return false;
     }
 
+    if (!matchResponseBodies(jaxrsMethod.responseBodySchema(), apiSpecMethod.responseBodySchema())) {
+      return false;
+    }
+
     return true;
   }
 
@@ -46,6 +50,21 @@ public class MatcherImpl implements Matcher {
     }
 
     if (!matchSchemas(jaxrsRequestBodySchema, specRequestBodySchema)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  protected boolean matchResponseBodies(Map<String, Object> jaxrsResponseBodySchema, Map<String, Object> specResponseBodySchema) {
+    if (jaxrsResponseBodySchema == null) {
+      // TODO distinguish the two cases: either schema remained undetermined, or there is truly no response body (WARN already logged)
+      return true;
+    } else if (specResponseBodySchema == null) {
+      return false;
+    }
+
+    if (!matchSchemas(jaxrsResponseBodySchema, specResponseBodySchema)) {
       return false;
     }
 

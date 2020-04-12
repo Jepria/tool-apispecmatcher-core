@@ -1,6 +1,9 @@
 package org.jepria.tools.apispecmatcher;
 
-import java.io.File;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+
+import java.io.*;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.InvocationTargetException;
@@ -9,9 +12,11 @@ import java.lang.reflect.Type;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Extracts jaxrs methods from the set of compiled java classes
@@ -20,12 +25,20 @@ public class JaxrsMethodExtractorCompiled {
 
   protected final ClassLoader classLoader;
 
+  protected final List<File> sourceTreeRoots;
+
   /**
    * @param classHrcRoots list of directories, each is a class file hierarchy root
    * @param jarFiles list of jar files with classes to load
+   * @param sourceTreeRoots list of directories, each is a java source root directory
    */
-  public JaxrsMethodExtractorCompiled(List<File> classHrcRoots, List<File> jarFiles) {
-    this(classPathToClassLoader(classHrcRoots, jarFiles));
+  public JaxrsMethodExtractorCompiled(List<File> classHrcRoots, List<File> jarFiles, List<File> sourceTreeRoots) {
+    this(classPathToClassLoader(classHrcRoots, jarFiles), sourceTreeRoots);
+  }
+
+  public JaxrsMethodExtractorCompiled(ClassLoader classLoader, List<File> sourceTreeRoots) {
+    this.classLoader = classLoader;
+    this.sourceTreeRoots = sourceTreeRoots;
   }
 
   /**
@@ -58,10 +71,6 @@ public class JaxrsMethodExtractorCompiled {
     return new URLClassLoader(urls);
   }
 
-  public JaxrsMethodExtractorCompiled(ClassLoader classLoader) {
-    this.classLoader = classLoader;
-  }
-
   public List<Method> extract(String jaxrsAdapterClassname) {
 
     final List<Method> result = new ArrayList<>();
@@ -77,7 +86,7 @@ public class JaxrsMethodExtractorCompiled {
 
     for (java.lang.reflect.Method refMethod: clazz.getDeclaredMethods()) {
 
-      // nullablle
+      // nullable
       String methodPathAnnotationValue = extractJaxrsPath(refMethod);
       final String pathAnnotationValue = (classPathAnnotationValue != null ? classPathAnnotationValue : "") + (methodPathAnnotationValue != null ? methodPathAnnotationValue : "");
 
@@ -203,6 +212,22 @@ public class JaxrsMethodExtractorCompiled {
           requestBodySchema = requestBodySchema0;
         }
 
+        final Map<String, Object> responseBodySchema;
+        {
+          Map<String, Object> responseBodySchema0 = null;
+          Type returnGenType = refMethod.getGenericReturnType();
+
+          if ("javax.ws.rs.core.Response".equals(returnGenType.getTypeName())) {
+            // unable to determine the response body type from the compiled code, try static extraction
+            responseBodySchema0 = extractResponseBodySchemaStatic(jaxrsAdapterClassname, refMethod);
+
+          } else {
+            // the specified return type is a response body type
+            responseBodySchema0 = buildSchema(returnGenType);
+          }
+          responseBodySchema = responseBodySchema0;
+        }
+
         Method method = new Method() {
           @Override
           public String httpMethod() {
@@ -232,7 +257,7 @@ public class JaxrsMethodExtractorCompiled {
 
           @Override
           public Map<String, Object> responseBodySchema() {
-            return null; // TODO
+            return responseBodySchema;
           }
         };
 
@@ -267,5 +292,157 @@ public class JaxrsMethodExtractorCompiled {
 
   protected Map<String, Object> buildSchema(Type type) {
     return OpenApiSchemaBuilder.buildSchema(type);
+  }
+
+  /**
+   *
+   * @param classname canonical classname
+   * @return null if noo source found for the class
+   */
+  protected File getSourceFile(String classname) {
+    File javaFile = null;
+    if (sourceTreeRoots != null) {
+      String childFile = classname.replaceAll("\\.", "/") + ".java";
+      for (File sourceTreeRoot : sourceTreeRoots) {
+        javaFile = new File(sourceTreeRoot, childFile);
+        if (Files.isRegularFile(javaFile.toPath())) {
+          break; //found the first
+          // TODO check the only sourceFileRoot contains the corresponding java file... or do not check it here?
+        }
+      }
+    }
+    return javaFile;
+  }
+
+  /**
+   *
+   * @param jaxrsAdapterClassname
+   * @param refMethod
+   * @return
+   */
+  protected Map<String, Object> extractResponseBodySchemaStatic(String jaxrsAdapterClassname, java.lang.reflect.Method refMethod) {
+
+    if (sourceTreeRoots == null) {
+      // TODO log: no source provided
+      System.out.println("WARN: No source tree roots provided");
+      return null;
+    }
+
+    final File javaFile = getSourceFile(jaxrsAdapterClassname);
+
+    if (javaFile == null) {
+      // TODO log: no source found for the class
+      System.out.println("WARN: No source file found for the class [" + jaxrsAdapterClassname + "] " +
+              "within the source trees " + sourceTreeRoots);
+      return null;
+    }
+
+    ResponseBodyTypeExtractorStatic.CanonicalClassnameResolver resolver = new CanonicalClassnameResolver();
+    ParameterizedType parametrizedTypeSchema;
+    try (Reader reader = new FileReader(javaFile)) {
+      try {
+        parametrizedTypeSchema = new ResponseBodyTypeExtractorStatic().extract(reader, refMethod, resolver);
+      } catch (ResponseBodyTypeExtractorStatic.NoSuchMethod e) {
+        // TODO so critical case to throw? maybe log(WARN) will be enough?
+        throw new IllegalStateException("No such method '" + methodToString(e.getMethod())
+                + "' in the source file " + javaFile.getAbsolutePath()
+                + ". The source file seems to have changed since the last compilation, try to recompile it");
+      }
+    } catch (FileNotFoundException e) {
+      // impossible
+      throw new RuntimeException(e);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
+    if (parametrizedTypeSchema == null) { // means that no "responseBody" variable declaration found in the method body
+      // the topmost point to log about this
+      System.out.println("WARN: The method '"
+              + methodToString(refMethod) + "' in the file " + javaFile.getAbsolutePath()
+              + "' does not contain a 'responseBody' variable declaration in the body," +
+              " unable to determine the runtime response body type.");
+      return null;
+    }
+
+    JavaType javaType = buildJavaType(parametrizedTypeSchema);
+    Map<String, Object> map = OpenApiSchemaBuilder.buildSchema(javaType);
+    return map;
+  }
+
+  // TODO non-production code. remove the method?
+  protected static String methodToString(java.lang.reflect.Method method) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(method.getName());
+    sb.append('(');
+    Parameter[] params = method.getParameters();
+    if (params != null) {
+      boolean first = true;
+      for (Parameter param: params) {
+        if (!first) {
+          sb.append(',');
+        } else {
+          first = false;
+        }
+        sb.append(param.getType().getSimpleName());
+      }
+    }
+    sb.append(')');
+    return sb.toString();
+  }
+
+  protected class CanonicalClassnameResolver implements ResponseBodyTypeExtractorStatic.CanonicalClassnameResolver {
+    @Override
+    public String resolve(Set<String> possible) {
+      String resolution = null;
+      for (String canonicalClassname: possible) {
+        try {
+          // TODO check class existence without loading it
+          Class<?> aClass = classLoader.loadClass(canonicalClassname);
+          String resolution0 = aClass.getCanonicalName();
+          if (resolution != null) {
+            // a class from the same resolution set has already been found
+            throw new IllegalStateException("The classpath expected to contain the only class from the set: "
+                    + possible + ", but found at least two: " + resolution + " and " + resolution0);
+          }
+          resolution = resolution0;
+        } catch (ClassNotFoundException e) {
+          // swallow
+        }
+      }
+      return resolution;
+    }
+  }
+
+  // the method is here because it uses the local classloader
+  protected JavaType buildJavaType(ParameterizedType type) {
+    if (type == null) {
+      return null;
+    }
+
+    // lookup root class
+    final Class<?> rootClass;
+    try {
+      rootClass = classLoader.loadClass(type.typeName());
+    } catch (ClassNotFoundException e) {
+      // impossible
+      throw new RuntimeException(e);
+    }
+
+    if (type.typeParams() == null) {
+      // simple type
+      return TypeFactory.defaultInstance().constructType(rootClass);
+
+    } else {
+      // parameterized type
+
+      final JavaType[] paramJavaTypes = new JavaType[type.typeParams().size()];
+      for (int i = 0; i < type.typeParams().size(); i++) {
+        ParameterizedType paramType = type.typeParams().get(i);
+        JavaType paramJavaType = buildJavaType(paramType);
+        paramJavaTypes[i] = paramJavaType;
+      }
+
+      return TypeFactory.defaultInstance().constructParametricType(rootClass, paramJavaTypes);
+    }
   }
 }

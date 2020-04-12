@@ -25,6 +25,7 @@ public class JaxrsMethodExtractorStatic {
 
     final List<Method> result = new ArrayList<>();
 
+    // better to open and close the reader at the same place (at the method invoker, not here)
     CompilationUnit cu = JavaParser.parse(jaxrsAdapterJava);
     NodeList<TypeDeclaration<?>> types = cu.getTypes();
     if (types.size() != 1) {

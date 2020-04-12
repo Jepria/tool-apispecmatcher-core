@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.module.jsonSchema.JsonSchema;
 import com.fasterxml.jackson.module.jsonSchema.JsonSchemaGenerator;
@@ -34,14 +35,21 @@ public class OpenApiSchemaBuilder {
     // JavaType in contrast to Class allows to build schemas for ParameterizedTypes using jackson
     JavaType javaType = TypeFactory.defaultInstance().constructType(type);
 
+    return buildSchema(javaType);
+  }
+
+
+  public static Map<String, Object> buildSchema(JavaType type) {
     ObjectMapper mapper = new ObjectMapper();
     mapper.setVisibility(mapper.getSerializationConfig().getDefaultVisibilityChecker()
             .withFieldVisibility(JsonAutoDetect.Visibility.ANY));
+    // by default jackson maps java.util.Date to json schema integer
+    mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     JsonSchemaGenerator schemaGen = new JsonSchemaGenerator(mapper);
 
     JsonSchema schema;
     try {
-      schema = schemaGen.generateSchema(javaType);
+      schema = schemaGen.generateSchema(type);
     } catch (JsonMappingException e) {
       throw new RuntimeException(e);
     }
