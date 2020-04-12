@@ -22,6 +22,7 @@ public class Main {
       final List<String> projectClasspathClassDirPaths = new ArrayList<>();
       final List<String> projectClasspathJarDirPaths = new ArrayList<>();
       final List<String> projectClasspathJarPaths = new ArrayList<>();
+      final List<String> projectSourceRootDirPaths = new ArrayList<>();
 
       // read cmd args
       for (int i = 0; i < args.length; i++) {
@@ -50,6 +51,11 @@ public class Main {
           i++;
           String projectClasspathJarsArg = args[i];
           projectClasspathJarPaths.addAll(Arrays.asList(projectClasspathJarsArg.split("\\s*;\\s*")));
+        } else if (args[i].equals("--project-source-root-dirs") && i < args.length - 1) {
+          // coma separated list of absolute paths to the source file hierarchy roots, corresponding to the class file hierarchy roots provided
+          i++;
+          String projectSourceRootDirsArg = args[i];
+          projectSourceRootDirPaths.addAll(Arrays.asList(projectSourceRootDirsArg.split("\\s*;\\s*")));
         }
       }
 
@@ -140,6 +146,27 @@ public class Main {
         }
       }
 
+      final List<File> projectSourceRootDirs = new ArrayList<>();
+      for (String pathStr: projectSourceRootDirPaths) {
+        Path path = null;
+        try {
+          path = Paths.get(pathStr);
+        } catch (Throwable e) {
+          e.printStackTrace(); // TODO
+          failed = true;
+          out.println("Incorrect file path [" + pathStr + "]: resolve exception");
+        }
+        if (!Files.exists(path)) {
+          failed = true;
+          out.println("Incorrect file path [" + pathStr + "]: file does not exist");
+        } else if (!Files.isDirectory(path)) {
+          failed = true;
+          out.println("Incorrect file path [" + pathStr + "]: not a directory");
+        } else {
+          projectSourceRootDirs.add(path.toFile());
+        }
+      }
+
       if (failed) {
         return;
       }
@@ -180,7 +207,7 @@ public class Main {
           }
           jars.addAll(projectClasspathJars);
 
-          ext2 = new JaxrsMethodExtractorCompiled(projectClasspathClassDirs, jars);
+          ext2 = new JaxrsMethodExtractorCompiled(projectClasspathClassDirs, jars, projectSourceRootDirs);
         }
 
         for (String r : jaxrsAdapterPaths) {

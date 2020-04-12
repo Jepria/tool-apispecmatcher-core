@@ -63,6 +63,15 @@ public interface Method {
    */
   Map<String, Object> requestBodySchema();
 
+  /**
+   * OpenAPI schema, as-is from json spec or built from the java type,
+   * {@code null} if the method has no response body
+   * or if the method does have response body but its runtime type remained undetermined
+   * // TODO distinguish those two cases
+   * @return
+   */
+  Map<String, Object> responseBodySchema();
+
   default String asString() {
     StringBuilder sb = new StringBuilder();
     sb.append(httpMethod());

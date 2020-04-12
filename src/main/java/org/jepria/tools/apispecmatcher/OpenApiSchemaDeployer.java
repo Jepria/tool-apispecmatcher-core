@@ -18,7 +18,7 @@ public class OpenApiSchemaDeployer {
 
     String refValue = (String)schema.get("$ref");
     if (refValue != null) {
-      if (schema.keySet().size() > 1) {
+      if (schema.keySet().size() > 1) { // TODO is this a correct validation rule?
         // TODO specify location in the exception message
         throw new IllegalStateException("The schema must either contain the '$ref' element and nothing else or not contain '$ref' element at all");
       }
