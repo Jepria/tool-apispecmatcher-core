@@ -1,4 +1,4 @@
-package org.jepria.tools.apispecmatcher;
+package org.jepria.tools.apispecmatcher.core;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.core.JsonProcessingException;

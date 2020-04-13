@@ -1,5 +1,5 @@
-import org.jepria.tools.apispecmatcher.JaxrsMethodExtractorStatic;
-import org.jepria.tools.apispecmatcher.Method;
+import org.jepria.tools.apispecmatcher.core.JaxrsMethodExtractorStatic;
+import org.jepria.tools.apispecmatcher.core.Method;
 
 import java.io.File;
 import java.io.FileReader;

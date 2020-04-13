@@ -1,4 +1,4 @@
-package org.jepria.tools.apispecmatcher;
+package org.jepria.tools.apispecmatcher.core;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;

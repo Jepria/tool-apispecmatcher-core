@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.jepria.tools</groupId>
-  <artifactId>apispec-matcher</artifactId>
+  <artifactId>apispecmatcher-core</artifactId>
   <packaging>jar</packaging>
   <version>1.0.0-SNAPSHOT</version>
 
@@ -26,7 +26,7 @@
           <archive>
             <manifest>
               <addClasspath>true</addClasspath>
-              <mainClass>org.jepria.tools.apispecmatcher.Main</mainClass>
+              <mainClass>org.jepria.tools.apispecmatcher.core.Main</mainClass>
             </manifest>
           </archive>
         </configuration>
