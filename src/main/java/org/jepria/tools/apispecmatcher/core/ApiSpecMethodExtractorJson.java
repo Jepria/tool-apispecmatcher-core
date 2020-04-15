@@ -13,9 +13,13 @@ import java.util.Map;
  */
 public class ApiSpecMethodExtractorJson {
 
-  public List<Method> extract(Reader spec) {
+  public static class ExtractedMethod {
+    public Method method;
+  }
 
-    final List<Method> result = new ArrayList<>();
+  public List<ExtractedMethod> extract(Reader spec) {
+
+    final List<ExtractedMethod> methods = new ArrayList<>();
 
     final Map<String, Object> map;
 
@@ -150,13 +154,15 @@ public class ApiSpecMethodExtractorJson {
                 }
               };
 
-              result.add(method);
+              ExtractedMethod extractedMethod = new ExtractedMethod();
+              extractedMethod.method = method;
+              methods.add(extractedMethod);
             }
           }
         }
       }
     }
 
-    return result;
+    return methods;
   }
 }

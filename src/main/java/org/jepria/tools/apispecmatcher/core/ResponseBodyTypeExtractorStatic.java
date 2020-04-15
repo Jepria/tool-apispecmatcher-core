@@ -15,6 +15,7 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
 
 import java.io.Reader;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -23,16 +24,6 @@ import java.util.Set;
  */
 public class ResponseBodyTypeExtractorStatic {
 
-  public static class NoSuchMethod extends Exception {
-    protected final java.lang.reflect.Method method;
-    public NoSuchMethod(java.lang.reflect.Method method) {
-      this.method = method;
-    }
-    public java.lang.reflect.Method getMethod() {
-      return method;
-    }
-  }
-
   /**
    * Adapter interface for the {@link ParameterizedTypeBuilder.CanonicalClassnameResolver}
    */
@@ -40,7 +31,22 @@ public class ResponseBodyTypeExtractorStatic {
     String resolve(Set<String> possible);
   }
 
+  public static class ExtractedType {
+    /**
+     * {@code null} if no "responseBody" variable declaration found in the method body
+     */
+    public ParameterizedType type;
 
+    /**
+     * Extraction features denoted by {@link Feature} constants.
+     * If extraction had no features, the collection is empty.
+     */
+    public final Set<Integer> features = new HashSet<>();
+
+    public static class Feature {
+      public static final int NO_SUCH_METHOD = 1;
+    }
+  }
 
   /**
    * Extracts type for the "responseBody" variable declared in the method body
@@ -48,23 +54,26 @@ public class ResponseBodyTypeExtractorStatic {
    * @param refMethod
    * @param resolver might be {@code null} if the no resolution is actually required
    *                 (if all canonical classnames statically extracted are unambiguous)
-   * @return {@code null} if no "responseBody" variable declaration found in the method body
+   * @return NotNull
    */
   // TODO make the method extract qualified type name (semantic analysis may be required)
-  public ParameterizedType extract(Reader reader, java.lang.reflect.Method refMethod,
-                                   CanonicalClassnameResolver resolver) throws NoSuchMethod {
+  public ExtractedType extract(Reader reader, java.lang.reflect.Method refMethod,
+                                   CanonicalClassnameResolver resolver) {
+
+    final ExtractedType result = new ExtractedType();
+
     // better to open and close the reader at the same place (at the method invoker, not here)
     CompilationUnit cu = JavaParser.parse(reader);
-    NodeList<TypeDeclaration<?>> types = cu.getTypes();
-    if (types.size() != 1) {
-      throw new IllegalStateException("Only single TypeDeclaration per java file is supported, actual: " + types.size());
+    NodeList<TypeDeclaration<?>> srcTypes = cu.getTypes();
+    if (srcTypes.size() != 1) {
+      throw new IllegalStateException("Only single TypeDeclaration per java file is supported, actual: " + srcTypes.size());
     }
-    final TypeDeclaration<?> type = types.get(0);
+    final TypeDeclaration<?> srcType = srcTypes.get(0);
 
     final MethodDeclaration srcMethod;
     {
       MethodDeclaration srcMethod0 = null;
-      List<MethodDeclaration> srcMethods = type.getMethods();
+      List<MethodDeclaration> srcMethods = srcType.getMethods();
       for (MethodDeclaration srcMethod1 : srcMethods) {
         if (methodEquals(srcMethod1, refMethod)) {
           srcMethod0 = srcMethod1;
@@ -76,25 +85,27 @@ public class ResponseBodyTypeExtractorStatic {
     }
 
     if (srcMethod == null) {
-      throw new NoSuchMethod(refMethod);
-    }
+      result.features.add(ExtractedType.Feature.NO_SUCH_METHOD);
 
-    Type responseBodyType = extract(srcMethod);
-    if (responseBodyType == null) {
-      return null;
-    }
+    } else {
 
-    ParameterizedTypeBuilder.CanonicalClassnameResolver resolverAdopted
-            = new ParameterizedTypeBuilder.CanonicalClassnameResolver() {
-      @Override
-      public String resolve(Set<String> possible) {
-        return resolver.resolve(possible);
+      Type responseBodyType = extract(srcMethod);
+
+      if (responseBodyType != null) {
+        ParameterizedTypeBuilder.CanonicalClassnameResolver resolverAdopted
+                = new ParameterizedTypeBuilder.CanonicalClassnameResolver() {
+          @Override
+          public String resolve(Set<String> possible) {
+            return resolver.resolve(possible);
+          }
+        };
+
+        ParameterizedType parameterizedType = new ParameterizedTypeBuilder(resolverAdopted).buildSchema(responseBodyType);
+        result.type = parameterizedType;
       }
-    };
+    }
 
-    ParameterizedType parameterizedType = new ParameterizedTypeBuilder(resolverAdopted).buildSchema(responseBodyType);
-
-    return parameterizedType;
+    return result;
   }
 
   protected boolean methodEquals(com.github.javaparser.ast.body.MethodDeclaration srcMethod, java.lang.reflect.Method refMethod) {
