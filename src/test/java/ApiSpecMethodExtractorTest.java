@@ -1,5 +1,4 @@
-import org.jepria.tools.apispecmatcher.Method;
-import org.jepria.tools.apispecmatcher.ApiSpecMethodExtractorJson;
+import org.jepria.tools.apispecmatcher.core.ApiSpecMethodExtractorJson;
 
 import java.io.FileReader;
 import java.io.Reader;
@@ -13,13 +12,13 @@ public class ApiSpecMethodExtractorTest {
       final String apiSpecJsonPath = "C:\\work\\tool-apispec-matcher\\src\\test\\resources\\swagger.json";
 
       ApiSpecMethodExtractorJson parser = new ApiSpecMethodExtractorJson();
-      List<Method> apiSpecMethods;
+      List<ApiSpecMethodExtractorJson.ExtractedMethod> apiSpecMethods;
       try (Reader r = new FileReader(apiSpecJsonPath)) {
         apiSpecMethods = parser.extract(r);
       }
 
-      for (Method apiSpecMethod: apiSpecMethods) {
-        System.out.println(apiSpecMethod.httpMethod() + ":" + apiSpecMethod.path());
+      for (ApiSpecMethodExtractorJson.ExtractedMethod apiSpecMethod: apiSpecMethods) {
+        System.out.println(apiSpecMethod.method.httpMethod() + ":" + apiSpecMethod.method.path());
       }
 
     } catch (Throwable e) { throw new RuntimeException(e); }

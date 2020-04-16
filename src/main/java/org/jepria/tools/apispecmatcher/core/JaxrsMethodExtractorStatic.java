@@ -1,4 +1,4 @@
-package org.jepria.tools.apispecmatcher;
+package org.jepria.tools.apispecmatcher.core;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;

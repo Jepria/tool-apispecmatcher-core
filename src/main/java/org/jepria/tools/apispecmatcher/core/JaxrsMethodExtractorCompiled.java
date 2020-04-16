@@ -1,4 +1,4 @@
-package org.jepria.tools.apispecmatcher;
+package org.jepria.tools.apispecmatcher.core;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -13,10 +13,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Extracts jaxrs methods from the set of compiled java classes
@@ -71,9 +68,28 @@ public class JaxrsMethodExtractorCompiled {
     return new URLClassLoader(urls);
   }
 
-  public List<Method> extract(String jaxrsAdapterClassname) {
+  public static class ExtractedMethod {
 
-    final List<Method> result = new ArrayList<>();
+    public Method method;
+
+    /**
+     * Extraction features denoted by {@link Features} constants.
+     * If extraction had no features, the collection is empty.
+     */
+    public final Set<Integer> features = new HashSet<>();
+
+    public static class Features {
+      public static final int DYNAMIC__TYPE_UNDECLARED = 1;
+      public static final int STATIC__NO_SOURCE_TREE = 2;
+      public static final int STATIC__NO_SOURCE_FILE = 3;
+      public static final int STATIC__NO_SOURCE_METHOD = 4;
+      public static final int STATIC__VARIABLE_UNDECLARED = 5;
+    }
+  }
+
+  public List<ExtractedMethod> extract(String jaxrsAdapterClassname) {
+
+    final List<ExtractedMethod> extractedMethods = new ArrayList<>();
 
     final Class<?> clazz;
     try {
@@ -88,7 +104,10 @@ public class JaxrsMethodExtractorCompiled {
 
       // nullable
       String methodPathAnnotationValue = extractJaxrsPath(refMethod);
-      final String pathAnnotationValue = (classPathAnnotationValue != null ? classPathAnnotationValue : "") + (methodPathAnnotationValue != null ? methodPathAnnotationValue : "");
+      final String pathAnnotationValue;
+      {
+        pathAnnotationValue = (classPathAnnotationValue != null ? classPathAnnotationValue : "") + (methodPathAnnotationValue != null ? methodPathAnnotationValue : "");
+      }
 
       final String httpMethod;
       {
@@ -118,6 +137,8 @@ public class JaxrsMethodExtractorCompiled {
 
 
       if (httpMethod != null) { // check httpMethod annotation only, path annotation might be null or empty
+
+        final ExtractedMethod extractedMethod = new ExtractedMethod();
 
         final Map<String, Object> requestBodySchema;
 
@@ -219,11 +240,54 @@ public class JaxrsMethodExtractorCompiled {
 
           if ("javax.ws.rs.core.Response".equals(returnGenType.getTypeName())) {
             // unable to determine the response body type from the compiled code, try static extraction
-            responseBodySchema0 = extractResponseBodySchemaStatic(jaxrsAdapterClassname, refMethod);
+            extractedMethod.features.add(ExtractedMethod.Features.DYNAMIC__TYPE_UNDECLARED);
+
+            if (sourceTreeRoots == null) {
+              extractedMethod.features.add(ExtractedMethod.Features.STATIC__NO_SOURCE_TREE);
+
+            } else {
+              final File javaFile = getSourceFile(jaxrsAdapterClassname);
+
+              if (javaFile == null) {
+                extractedMethod.features.add(ExtractedMethod.Features.STATIC__NO_SOURCE_FILE);
+
+              } else {
+
+                ResponseBodyTypeExtractorStatic.CanonicalClassnameResolver resolver = new CanonicalClassnameResolver();
+
+                ResponseBodyTypeExtractorStatic.ExtractedType extractedType;
+                try (Reader reader = new FileReader(javaFile)) {
+                  extractedType = new ResponseBodyTypeExtractorStatic().extract(reader, refMethod, resolver);
+                } catch (FileNotFoundException e) {
+                  // impossible
+                  throw new RuntimeException(e);
+                } catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+
+                if (extractedType.features.remove(ResponseBodyTypeExtractorStatic.ExtractedType.Feature.NO_SUCH_METHOD)) {
+                  // TODO specify the non-found method (instead of suggesting to recompile the entire project)
+                  extractedMethod.features.add(ExtractedMethod.Features.STATIC__NO_SOURCE_METHOD);
+                }
+                // check all features consumed
+                if (extractedType.features.size() > 0) {
+                  throw new IllegalStateException("All features must be consumed. Remained: " + extractedType.features);
+                }
+
+                if (extractedType.type != null) {
+                  JavaType javaType = buildJavaType(extractedType.type);
+                  responseBodySchema0 = OpenApiSchemaBuilder.buildSchema(javaType);
+
+                } else {
+                  extractedMethod.features.add(ExtractedMethod.Features.STATIC__VARIABLE_UNDECLARED);
+                }
+              }
+            }
 
           } else {
             // the specified return type is a response body type
             responseBodySchema0 = buildSchema(returnGenType);
+
           }
           responseBodySchema = responseBodySchema0;
         }
@@ -261,11 +325,13 @@ public class JaxrsMethodExtractorCompiled {
           }
         };
 
-        result.add(method);
+        extractedMethod.method = method;
+
+        extractedMethods.add(extractedMethod);
       }
     }
 
-    return result;
+    return extractedMethods;
   }
 
   protected String extractJaxrsPath(AnnotatedElement element) {
@@ -312,61 +378,6 @@ public class JaxrsMethodExtractorCompiled {
       }
     }
     return javaFile;
-  }
-
-  /**
-   *
-   * @param jaxrsAdapterClassname
-   * @param refMethod
-   * @return
-   */
-  protected Map<String, Object> extractResponseBodySchemaStatic(String jaxrsAdapterClassname, java.lang.reflect.Method refMethod) {
-
-    if (sourceTreeRoots == null) {
-      // TODO log: no source provided
-      System.out.println("WARN: No source tree roots provided");
-      return null;
-    }
-
-    final File javaFile = getSourceFile(jaxrsAdapterClassname);
-
-    if (javaFile == null) {
-      // TODO log: no source found for the class
-      System.out.println("WARN: No source file found for the class [" + jaxrsAdapterClassname + "] " +
-              "within the source trees " + sourceTreeRoots);
-      return null;
-    }
-
-    ResponseBodyTypeExtractorStatic.CanonicalClassnameResolver resolver = new CanonicalClassnameResolver();
-    ParameterizedType parametrizedTypeSchema;
-    try (Reader reader = new FileReader(javaFile)) {
-      try {
-        parametrizedTypeSchema = new ResponseBodyTypeExtractorStatic().extract(reader, refMethod, resolver);
-      } catch (ResponseBodyTypeExtractorStatic.NoSuchMethod e) {
-        // TODO so critical case to throw? maybe log(WARN) will be enough?
-        throw new IllegalStateException("No such method '" + methodToString(e.getMethod())
-                + "' in the source file " + javaFile.getAbsolutePath()
-                + ". The source file seems to have changed since the last compilation, try to recompile it");
-      }
-    } catch (FileNotFoundException e) {
-      // impossible
-      throw new RuntimeException(e);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
-    if (parametrizedTypeSchema == null) { // means that no "responseBody" variable declaration found in the method body
-      // the topmost point to log about this
-      System.out.println("WARN: The method '"
-              + methodToString(refMethod) + "' in the file " + javaFile.getAbsolutePath()
-              + "' does not contain a 'responseBody' variable declaration in the body," +
-              " unable to determine the runtime response body type.");
-      return null;
-    }
-
-    JavaType javaType = buildJavaType(parametrizedTypeSchema);
-    Map<String, Object> map = OpenApiSchemaBuilder.buildSchema(javaType);
-    return map;
   }
 
   // TODO non-production code. remove the method?

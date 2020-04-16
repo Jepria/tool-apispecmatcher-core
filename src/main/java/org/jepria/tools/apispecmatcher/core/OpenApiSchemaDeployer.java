@@ -1,4 +1,4 @@
-package org.jepria.tools.apispecmatcher;
+package org.jepria.tools.apispecmatcher.core;
 
 import java.util.HashMap;
 import java.util.Map;
