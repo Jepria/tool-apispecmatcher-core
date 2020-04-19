@@ -9,11 +9,8 @@ public class MatcherImpl implements Matcher {
 
   protected boolean matchMethods(Method jaxrsMethod, Method apiSpecMethod) {
 
-    if (!jaxrsMethod.httpMethod().equalsIgnoreCase(apiSpecMethod.httpMethod())) {
-      return false;
-    }
-
-    if (!matchPaths(jaxrsMethod.path(), apiSpecMethod.path())) {
+    // TODO remove this!
+    if (!new MethodMapperImpl().mapMethods(jaxrsMethod, apiSpecMethod)) {
       return false;
     }
 
@@ -102,20 +99,6 @@ public class MatcherImpl implements Matcher {
   protected boolean matchSchemas(Map<String, Object> schema1, Map<String, Object> schema2) {
     // TODO implement schema matching
     return true;
-  }
-
-  protected boolean matchPaths(String path1, String path2) {
-    if (path1 == null && path2 == null) {
-      return true;
-    } else if (path1 == null || path2 == null) {
-      return false;
-    }
-
-    // do not match path params
-    String path1paramsIgnored = path1.replaceAll("\\{.+?\\}", "{}");
-    String path2paramsIgnored = path2.replaceAll("\\{.+?\\}", "{}");
-
-    return path1paramsIgnored.equals(path2paramsIgnored);
   }
 
   @Override

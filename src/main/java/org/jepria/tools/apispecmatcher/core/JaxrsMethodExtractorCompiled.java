@@ -13,7 +13,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Extracts jaxrs methods from the set of compiled java classes
@@ -72,18 +75,49 @@ public class JaxrsMethodExtractorCompiled {
 
     public Method method;
 
-    /**
-     * Extraction features denoted by {@link Features} constants.
-     * If extraction had no features, the collection is empty.
-     */
-    public final Set<Integer> features = new HashSet<>();
+    public ResponseBodySchemaExtractionStatus responseBodySchemaExtractionStatus;
 
-    public static class Features {
-      public static final int DYNAMIC__TYPE_UNDECLARED = 1;
-      public static final int STATIC__NO_SOURCE_TREE = 2;
-      public static final int STATIC__NO_SOURCE_FILE = 3;
-      public static final int STATIC__NO_SOURCE_METHOD = 4;
-      public static final int STATIC__VARIABLE_UNDECLARED = 5;
+    public enum ResponseBodySchemaExtractionStatus {
+      /**
+       * The method return type declared is not a basic {@code javax.ws.rs.core.Response}
+       */
+      METHOD_RETURN_TYPE_DECLARED,
+
+      /**
+       * The method return type declared is a basic {@code javax.ws.rs.core.Response},
+       * and no source tree provided to attempt static response body type extraction
+       */
+      STATIC_NO_SOURCE_TREE,
+
+      /**
+       * The method return type declared is a basic {@code javax.ws.rs.core.Response},
+       * the source tree is provided, but no source file found in it for the class
+       * containing the method
+       */
+      STATIC_NO_SOURCE_FILE,
+
+      /**
+       * The method return type declared is a basic {@code javax.ws.rs.core.Response},
+       * the source tree is provided, the source file found for the class containing the method,
+       * but no such method found in the source code
+       */
+      STATIC_NO_SOURCE_METHOD,
+
+      /**
+       * The method return type declared is a basic {@code javax.ws.rs.core.Response},
+       * the source tree is provided, the source file found for the class containing the method,
+       * the method found in the source code,
+       * but no "responseBody" variable declaration found in the method body
+       */
+      STATIC_VARIABLE_UNDECLARED,
+
+      /**
+       * The method return type declared is a basic {@code javax.ws.rs.core.Response},
+       * the source tree is provided, the source file found for the class containing the method,
+       * the method found in the source code,
+       * the "responseBody" variable declaration found in the method body
+       */
+      STATIC_VARIABLE_DECLARED,
     }
   }
 
@@ -236,28 +270,25 @@ public class JaxrsMethodExtractorCompiled {
         final Map<String, Object> responseBodySchema;
         {
           Map<String, Object> responseBodySchema0 = null;
-          Type returnGenType = refMethod.getGenericReturnType();
+          Type returnTypeDeclared = refMethod.getGenericReturnType();
 
-          if ("javax.ws.rs.core.Response".equals(returnGenType.getTypeName())) {
+          if ("javax.ws.rs.core.Response".equals(returnTypeDeclared.getTypeName())) {
             // unable to determine the response body type from the compiled code, try static extraction
-            extractedMethod.features.add(ExtractedMethod.Features.DYNAMIC__TYPE_UNDECLARED);
 
             if (sourceTreeRoots == null) {
-              extractedMethod.features.add(ExtractedMethod.Features.STATIC__NO_SOURCE_TREE);
-
+              extractedMethod.responseBodySchemaExtractionStatus
+                      = ExtractedMethod.ResponseBodySchemaExtractionStatus.STATIC_NO_SOURCE_TREE;
             } else {
               final File javaFile = getSourceFile(jaxrsAdapterClassname);
 
               if (javaFile == null) {
-                extractedMethod.features.add(ExtractedMethod.Features.STATIC__NO_SOURCE_FILE);
-
+                extractedMethod.responseBodySchemaExtractionStatus
+                        = ExtractedMethod.ResponseBodySchemaExtractionStatus.STATIC_NO_SOURCE_FILE;
               } else {
 
-                ResponseBodyTypeExtractorStatic.CanonicalClassnameResolver resolver = new CanonicalClassnameResolver();
-
-                ResponseBodyTypeExtractorStatic.ExtractedType extractedType;
+                ResponseBodyTypeExtractorStatic responseBodyTypeExtractorStatic;
                 try (Reader reader = new FileReader(javaFile)) {
-                  extractedType = new ResponseBodyTypeExtractorStatic().extract(reader, refMethod, resolver);
+                  responseBodyTypeExtractorStatic = new ResponseBodyTypeExtractorStatic(reader);
                 } catch (FileNotFoundException e) {
                   // impossible
                   throw new RuntimeException(e);
@@ -265,30 +296,40 @@ public class JaxrsMethodExtractorCompiled {
                   throw new RuntimeException(e);
                 }
 
-                if (extractedType.features.remove(ResponseBodyTypeExtractorStatic.ExtractedType.Feature.NO_SUCH_METHOD)) {
+                ResponseBodyTypeExtractorStatic.CanonicalClassnameResolver resolver = new CanonicalClassnameResolver();
+
+                ParameterizedType type;
+                try {
+                  type = responseBodyTypeExtractorStatic.extract(refMethod, resolver);
+                } catch (ResponseBodyTypeExtractorStatic.NoRefMethodException e) {
+                  type = null;
+
                   // TODO specify the non-found method (instead of suggesting to recompile the entire project)
-                  extractedMethod.features.add(ExtractedMethod.Features.STATIC__NO_SOURCE_METHOD);
-                }
-                // check all features consumed
-                if (extractedType.features.size() > 0) {
-                  throw new IllegalStateException("All features must be consumed. Remained: " + extractedType.features);
+                  extractedMethod.responseBodySchemaExtractionStatus
+                          = ExtractedMethod.ResponseBodySchemaExtractionStatus.STATIC_NO_SOURCE_METHOD;
                 }
 
-                if (extractedType.type != null) {
-                  JavaType javaType = buildJavaType(extractedType.type);
+                if (type != null) {
+                  JavaType javaType = buildJavaType(type);
                   responseBodySchema0 = OpenApiSchemaBuilder.buildSchema(javaType);
 
+                  extractedMethod.responseBodySchemaExtractionStatus
+                          = ExtractedMethod.ResponseBodySchemaExtractionStatus.STATIC_VARIABLE_DECLARED;
                 } else {
-                  extractedMethod.features.add(ExtractedMethod.Features.STATIC__VARIABLE_UNDECLARED);
+                  extractedMethod.responseBodySchemaExtractionStatus
+                          = ExtractedMethod.ResponseBodySchemaExtractionStatus.STATIC_VARIABLE_UNDECLARED;
                 }
               }
             }
 
           } else {
-            // the specified return type is a response body type
-            responseBodySchema0 = buildSchema(returnGenType);
+            // the return type declared is a response body type
+            extractedMethod.responseBodySchemaExtractionStatus
+                    = ExtractedMethod.ResponseBodySchemaExtractionStatus.METHOD_RETURN_TYPE_DECLARED;
 
+            responseBodySchema0 = buildSchema(returnTypeDeclared);
           }
+
           responseBodySchema = responseBodySchema0;
         }
 

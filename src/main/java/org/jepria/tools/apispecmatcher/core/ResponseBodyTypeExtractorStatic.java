@@ -15,7 +15,6 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
 
 import java.io.Reader;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -24,46 +23,35 @@ import java.util.Set;
  */
 public class ResponseBodyTypeExtractorStatic {
 
+  protected final CompilationUnit cu;
+
+  public ResponseBodyTypeExtractorStatic(Reader reader) {
+    // better to open and close the reader at the same place (at the method invoker, not here)
+    cu = JavaParser.parse(reader);
+  }
+
   /**
-   * Adapter interface for the {@link ParameterizedTypeBuilder.CanonicalClassnameResolver}
+   * Adapter interface for the {@link ParameterizedTypeBuilderStaticImpl.CanonicalClassnameResolver}
    */
   public interface CanonicalClassnameResolver {
     String resolve(Set<String> possible);
   }
 
-  public static class ExtractedType {
-    /**
-     * {@code null} if no "responseBody" variable declaration found in the method body
-     */
-    public ParameterizedType type;
-
-    /**
-     * Extraction features denoted by {@link Feature} constants.
-     * If extraction had no features, the collection is empty.
-     */
-    public final Set<Integer> features = new HashSet<>();
-
-    public static class Feature {
-      public static final int NO_SUCH_METHOD = 1;
-    }
+  public static class NoRefMethodException extends IllegalStateException {
   }
 
   /**
    * Extracts type for the "responseBody" variable declared in the method body
-   * @param reader
-   * @param refMethod
+   * @param refMethod method to extract the response body type for
    * @param resolver might be {@code null} if the no resolution is actually required
    *                 (if all canonical classnames statically extracted are unambiguous)
-   * @return NotNull
+   * @return {@code null} if no "responseBody" variable declaration found in the method body
+   * @throws NoRefMethodException if no refMethod found in the source code
    */
   // TODO make the method extract qualified type name (semantic analysis may be required)
-  public ExtractedType extract(Reader reader, java.lang.reflect.Method refMethod,
+  public ParameterizedType extract(java.lang.reflect.Method refMethod,
                                    CanonicalClassnameResolver resolver) {
 
-    final ExtractedType result = new ExtractedType();
-
-    // better to open and close the reader at the same place (at the method invoker, not here)
-    CompilationUnit cu = JavaParser.parse(reader);
     NodeList<TypeDeclaration<?>> srcTypes = cu.getTypes();
     if (srcTypes.size() != 1) {
       throw new IllegalStateException("Only single TypeDeclaration per java file is supported, actual: " + srcTypes.size());
@@ -85,27 +73,27 @@ public class ResponseBodyTypeExtractorStatic {
     }
 
     if (srcMethod == null) {
-      result.features.add(ExtractedType.Feature.NO_SUCH_METHOD);
-
-    } else {
-
-      Type responseBodyType = extract(srcMethod);
-
-      if (responseBodyType != null) {
-        ParameterizedTypeBuilder.CanonicalClassnameResolver resolverAdopted
-                = new ParameterizedTypeBuilder.CanonicalClassnameResolver() {
-          @Override
-          public String resolve(Set<String> possible) {
-            return resolver.resolve(possible);
-          }
-        };
-
-        ParameterizedType parameterizedType = new ParameterizedTypeBuilder(resolverAdopted).buildSchema(responseBodyType);
-        result.type = parameterizedType;
-      }
+      throw new NoRefMethodException();
     }
 
-    return result;
+    Type responseBodyType = extract(srcMethod);
+
+    if (responseBodyType == null) {
+      return null;
+    }
+
+    ParameterizedTypeBuilderStatic.CanonicalClassnameResolver resolverAdopted
+            = new ParameterizedTypeBuilderStatic.CanonicalClassnameResolver() {
+      @Override
+      public String resolve(Set<String> possible) {
+        return resolver.resolve(possible);
+      }
+    };
+
+    ParameterizedTypeBuilderStatic parameterizedTypeBuilderStatic = new ParameterizedTypeBuilderStaticImpl();
+    ParameterizedType parameterizedType = parameterizedTypeBuilderStatic.build(cu, responseBodyType, resolverAdopted);
+
+    return parameterizedType;
   }
 
   protected boolean methodEquals(com.github.javaparser.ast.body.MethodDeclaration srcMethod, java.lang.reflect.Method refMethod) {

@@ -11,39 +11,12 @@ import com.github.javaparser.ast.type.Type;
 
 import java.util.*;
 
-/**
- * Builds {@link ParameterizedType}s from the AST type nodes
- */
-public class ParameterizedTypeBuilder {
+public class ParameterizedTypeBuilderStaticImpl implements ParameterizedTypeBuilderStatic {
 
-  /**
-   * Resolves a set of possible (ambiguous) canonical classnames of the same class into a single one,
-   * against some external classpath.
-   *
-   * Canonical classname ambiguity origins from the static code analysis (AST) limitations, e.g.:
-   * <pre>
-   * import a.b.c.*;
-   * import d.e.f.*;
-   * public class A {
-   *   X x;
-   * }
-   * </pre>
-   * Here, the class X may have either {@code a.b.c.X} or {@code d.e.f.X} canonical classname.
-   **/
-  public interface CanonicalClassnameResolver {
-    /**
-     * @param possible set of ambiguous canonical classnames of the same class
-     * @return one of the elements from the set
-     */
-    String resolve(Set<String> possible);
-  }
-
-  /**
-   * Initialized by {@link #initCompilationUnit(Node)}
-   */
   protected CompilationUnit cu;
 
-  protected final CanonicalClassnameResolver resolver;
+  protected CanonicalClassnameResolver resolver;
+
   /**
    * Map for caching.
    * Key: simple classname, value: resolved canonical classname
@@ -124,35 +97,15 @@ public class ParameterizedTypeBuilder {
     return result;
   }
 
-  public ParameterizedTypeBuilder(CanonicalClassnameResolver resolver) {
+  @Override
+  public ParameterizedType build(CompilationUnit cu, Type type, CanonicalClassnameResolver resolver) {
+    this.cu = cu;
     this.resolver = resolver;
+    return buildSchemaInternal(type);
   }
 
-  /**
-   * Initializes {@link #cu} (if needed) by any node that belongs to it
-   * MUST be invoked at each entry point of the class
-   * @param node
-   */
-  protected void initCompilationUnit(Node node) {
-    if (cu == null) {
-      Node n = node;
-      while (n != null && !(n instanceof CompilationUnit)) {
-        n = n.getParentNode().orElse(null);
-      }
-      if (n == null) {
-        throw new IllegalStateException("The node [" + node + "] has no CompilationUnit parent");
-      }
-      cu = (CompilationUnit) n;
-    }
-  }
-
-  /**
-   *
-   * @param type with simple type names
-   * @return
-   */
-  public ParameterizedType buildSchema(Type type) {
-    initCompilationUnit(type);
+  // method for recursive invocations
+  private ParameterizedType buildSchemaInternal(Type type) {
 
     final String simpleClassname;
     {
@@ -187,7 +140,7 @@ public class ParameterizedTypeBuilder {
         if (typeArguments != null) {
           typeParams0 = new ArrayList<>();
           for (Type typeArgument : typeArguments) {
-            ParameterizedType typeParam = buildSchema(typeArgument);
+            ParameterizedType typeParam = buildSchemaInternal(typeArgument);
             typeParams0.add(typeParam);
           }
         }
@@ -200,12 +153,10 @@ public class ParameterizedTypeBuilder {
       public String typeName() {
         return canonicalClassname;
       }
-
       @Override
       public List<ParameterizedType> typeParams() {
         return typeParams;
       }
-
     };
   }
 }
