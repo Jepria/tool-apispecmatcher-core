@@ -225,7 +225,7 @@ public class JaxrsMethodExtractorCompiled {
           if ("javax.ws.rs.core.Response".equals(returnTypeDeclared.getTypeName())) {
             // unable to determine the response body type from the compiled code, try static extraction
 
-            if (sourceTreeRoots == null) {
+            if (sourceTreeRoots == null || sourceTreeRoots.isEmpty()) {
               responseBodySchemaExtractionStatus0
                       = JaxrsMethod.ResponseBodySchemaExtractionStatus.STATIC_NO_SOURCE_TREE;
             } else {

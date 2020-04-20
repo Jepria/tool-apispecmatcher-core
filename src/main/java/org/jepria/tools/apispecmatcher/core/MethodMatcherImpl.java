@@ -26,9 +26,34 @@ public class MethodMatcherImpl implements MethodMatcher {
       return false;
     }
 
-    if (!matchResponseBodies(jaxrsMethod.responseBodySchema(), specMethod.responseBodySchema())) {
-      return false;
+    if (specMethod.responseBodySchema() == null) {
+      switch (jaxrsMethod.responseBodySchemaExtractionStatus()) {
+        case METHOD_RETURN_TYPE_DECLARED: case STATIC_VARIABLE_DECLARED: {
+          // the response body schema must be declared in the spec
+          return false;
+        }
+        default: {
+          // do not match schemas because the response *probably* has no body
+          // TODO warn anyway?
+          break;
+        }
+      }
+    } else {
+      switch (jaxrsMethod.responseBodySchemaExtractionStatus()) {
+        case METHOD_RETURN_TYPE_DECLARED: case STATIC_VARIABLE_DECLARED: {
+          // match response body schemas
+          if (!matchResponseBodies(jaxrsMethod.responseBodySchema(), specMethod.responseBodySchema())) {
+            return false;
+          }
+        }
+        default: {
+          // do not match schemas because these cases MUST be processed (and logged) by the invoker
+          // TODO warn anyway?
+          break;
+        }
+      }
     }
+
 
     return true;
   }
