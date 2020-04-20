@@ -13,7 +13,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Extracts jaxrs methods from the set of compiled java classes
@@ -68,28 +71,9 @@ public class JaxrsMethodExtractorCompiled {
     return new URLClassLoader(urls);
   }
 
-  public static class ExtractedMethod {
+  public List<JaxrsMethod> extract(String jaxrsAdapterClassname) {
 
-    public Method method;
-
-    /**
-     * Extraction features denoted by {@link Features} constants.
-     * If extraction had no features, the collection is empty.
-     */
-    public final Set<Integer> features = new HashSet<>();
-
-    public static class Features {
-      public static final int DYNAMIC__TYPE_UNDECLARED = 1;
-      public static final int STATIC__NO_SOURCE_TREE = 2;
-      public static final int STATIC__NO_SOURCE_FILE = 3;
-      public static final int STATIC__NO_SOURCE_METHOD = 4;
-      public static final int STATIC__VARIABLE_UNDECLARED = 5;
-    }
-  }
-
-  public List<ExtractedMethod> extract(String jaxrsAdapterClassname) {
-
-    final List<ExtractedMethod> extractedMethods = new ArrayList<>();
+    final List<JaxrsMethod> extractedMethods = new ArrayList<>();
 
     final Class<?> clazz;
     try {
@@ -137,8 +121,6 @@ public class JaxrsMethodExtractorCompiled {
 
 
       if (httpMethod != null) { // check httpMethod annotation only, path annotation might be null or empty
-
-        final ExtractedMethod extractedMethod = new ExtractedMethod();
 
         final Map<String, Object> requestBodySchema;
 
@@ -233,31 +215,30 @@ public class JaxrsMethodExtractorCompiled {
           requestBodySchema = requestBodySchema0;
         }
 
+        final JaxrsMethod.ResponseBodySchemaExtractionStatus responseBodySchemaExtractionStatus;
         final Map<String, Object> responseBodySchema;
         {
+          JaxrsMethod.ResponseBodySchemaExtractionStatus responseBodySchemaExtractionStatus0;
           Map<String, Object> responseBodySchema0 = null;
-          Type returnGenType = refMethod.getGenericReturnType();
+          Type returnTypeDeclared = refMethod.getGenericReturnType();
 
-          if ("javax.ws.rs.core.Response".equals(returnGenType.getTypeName())) {
+          if ("javax.ws.rs.core.Response".equals(returnTypeDeclared.getTypeName())) {
             // unable to determine the response body type from the compiled code, try static extraction
-            extractedMethod.features.add(ExtractedMethod.Features.DYNAMIC__TYPE_UNDECLARED);
 
-            if (sourceTreeRoots == null) {
-              extractedMethod.features.add(ExtractedMethod.Features.STATIC__NO_SOURCE_TREE);
-
+            if (sourceTreeRoots == null || sourceTreeRoots.isEmpty()) {
+              responseBodySchemaExtractionStatus0
+                      = JaxrsMethod.ResponseBodySchemaExtractionStatus.STATIC_NO_SOURCE_TREE;
             } else {
               final File javaFile = getSourceFile(jaxrsAdapterClassname);
 
               if (javaFile == null) {
-                extractedMethod.features.add(ExtractedMethod.Features.STATIC__NO_SOURCE_FILE);
-
+                responseBodySchemaExtractionStatus0
+                        = JaxrsMethod.ResponseBodySchemaExtractionStatus.STATIC_NO_SOURCE_FILE;
               } else {
 
-                ResponseBodyTypeExtractorStatic.CanonicalClassnameResolver resolver = new CanonicalClassnameResolver();
-
-                ResponseBodyTypeExtractorStatic.ExtractedType extractedType;
+                ResponseBodyTypeExtractorStatic responseBodyTypeExtractorStatic;
                 try (Reader reader = new FileReader(javaFile)) {
-                  extractedType = new ResponseBodyTypeExtractorStatic().extract(reader, refMethod, resolver);
+                  responseBodyTypeExtractorStatic = new ResponseBodyTypeExtractorStatic(reader);
                 } catch (FileNotFoundException e) {
                   // impossible
                   throw new RuntimeException(e);
@@ -265,34 +246,45 @@ public class JaxrsMethodExtractorCompiled {
                   throw new RuntimeException(e);
                 }
 
-                if (extractedType.features.remove(ResponseBodyTypeExtractorStatic.ExtractedType.Feature.NO_SUCH_METHOD)) {
+                ResponseBodyTypeExtractorStatic.CanonicalClassnameResolver resolver = new CanonicalClassnameResolver();
+
+                ParameterizedType type;
+                try {
+                  type = responseBodyTypeExtractorStatic.extract(refMethod, resolver);
+                } catch (ResponseBodyTypeExtractorStatic.NoRefMethodException e) {
+                  type = null;
+
                   // TODO specify the non-found method (instead of suggesting to recompile the entire project)
-                  extractedMethod.features.add(ExtractedMethod.Features.STATIC__NO_SOURCE_METHOD);
-                }
-                // check all features consumed
-                if (extractedType.features.size() > 0) {
-                  throw new IllegalStateException("All features must be consumed. Remained: " + extractedType.features);
+                  responseBodySchemaExtractionStatus0
+                          = JaxrsMethod.ResponseBodySchemaExtractionStatus.STATIC_NO_SOURCE_METHOD;
                 }
 
-                if (extractedType.type != null) {
-                  JavaType javaType = buildJavaType(extractedType.type);
+                if (type != null) {
+                  JavaType javaType = buildJavaType(type);
                   responseBodySchema0 = OpenApiSchemaBuilder.buildSchema(javaType);
 
+                  responseBodySchemaExtractionStatus0
+                          = JaxrsMethod.ResponseBodySchemaExtractionStatus.STATIC_VARIABLE_DECLARED;
                 } else {
-                  extractedMethod.features.add(ExtractedMethod.Features.STATIC__VARIABLE_UNDECLARED);
+                  responseBodySchemaExtractionStatus0
+                          = JaxrsMethod.ResponseBodySchemaExtractionStatus.STATIC_VARIABLE_UNDECLARED;
                 }
               }
             }
 
           } else {
-            // the specified return type is a response body type
-            responseBodySchema0 = buildSchema(returnGenType);
+            // the return type declared is a response body type
+            responseBodySchemaExtractionStatus0
+                    = JaxrsMethod.ResponseBodySchemaExtractionStatus.METHOD_RETURN_TYPE_DECLARED;
 
+            responseBodySchema0 = buildSchema(returnTypeDeclared);
           }
+
+          responseBodySchemaExtractionStatus = responseBodySchemaExtractionStatus0;
           responseBodySchema = responseBodySchema0;
         }
 
-        Method method = new Method() {
+        JaxrsMethod method = new JaxrsMethod() {
           @Override
           public String httpMethod() {
             return httpMethod;
@@ -300,15 +292,6 @@ public class JaxrsMethodExtractorCompiled {
           @Override
           public String path() {
             return pathAnnotationValue;
-          }
-          @Override
-          public Location location() {
-            return new Location() {
-              @Override
-              public String asString() {
-                return jaxrsAdapterClassname + "(?:?)";
-              }
-            };
           }
           @Override
           public List<Parameter> params() {
@@ -323,11 +306,14 @@ public class JaxrsMethodExtractorCompiled {
           public Map<String, Object> responseBodySchema() {
             return responseBodySchema;
           }
+
+          @Override
+          public ResponseBodySchemaExtractionStatus responseBodySchemaExtractionStatus() {
+            return responseBodySchemaExtractionStatus;
+          }
         };
 
-        extractedMethod.method = method;
-
-        extractedMethods.add(extractedMethod);
+        extractedMethods.add(method);
       }
     }
 

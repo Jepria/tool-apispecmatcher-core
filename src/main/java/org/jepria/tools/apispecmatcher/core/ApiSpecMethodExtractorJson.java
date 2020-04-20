@@ -13,13 +13,9 @@ import java.util.Map;
  */
 public class ApiSpecMethodExtractorJson {
 
-  public static class ExtractedMethod {
-    public Method method;
-  }
+  public List<SpecMethod> extract(Reader spec) {
 
-  public List<ExtractedMethod> extract(Reader spec) {
-
-    final List<ExtractedMethod> methods = new ArrayList<>();
+    final List<SpecMethod> methods = new ArrayList<>();
 
     final Map<String, Object> map;
 
@@ -118,7 +114,7 @@ public class ApiSpecMethodExtractorJson {
               }
 
 
-              Method method = new Method() {
+              SpecMethod method = new SpecMethod() {
                 @Override
                 public String httpMethod() {
                   return httpMethod;
@@ -127,15 +123,6 @@ public class ApiSpecMethodExtractorJson {
                 @Override
                 public String path() {
                   return path;
-                }
-
-                @Override
-                public Location location() {
-                  return new Location() {
-                    public String asString() {
-                      return "(?)";
-                    }
-                  };
                 }
 
                 @Override
@@ -154,9 +141,7 @@ public class ApiSpecMethodExtractorJson {
                 }
               };
 
-              ExtractedMethod extractedMethod = new ExtractedMethod();
-              extractedMethod.method = method;
-              methods.add(extractedMethod);
+              methods.add(method);
             }
           }
         }

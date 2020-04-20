@@ -1,26 +1,16 @@
 package org.jepria.tools.apispecmatcher.core;
 
 import com.google.gson.GsonBuilder;
-
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class MatcherImpl implements Matcher {
+public class MethodMatcherImpl implements MethodMatcher {
 
-  protected boolean matchMethods(Method jaxrsMethod, Method apiSpecMethod) {
-
-    if (!jaxrsMethod.httpMethod().equalsIgnoreCase(apiSpecMethod.httpMethod())) {
-      return false;
-    }
-
-    if (!matchPaths(jaxrsMethod.path(), apiSpecMethod.path())) {
-      return false;
-    }
+  @Override
+  public boolean match(SpecMethod specMethod, JaxrsMethod jaxrsMethod) {
 
     List<Method.Parameter> jaxrsParams = jaxrsMethod.params();
-    List<Method.Parameter> specParams = apiSpecMethod.params();
+    List<Method.Parameter> specParams = specMethod.params();
     if (jaxrsParams.size() != specParams.size()) {
       return false;
     }
@@ -33,13 +23,38 @@ public class MatcherImpl implements Matcher {
     }
 
 
-    if (!matchRequestBodies(jaxrsMethod.requestBodySchema(), apiSpecMethod.requestBodySchema())) {
+    if (!matchRequestBodies(jaxrsMethod.requestBodySchema(), specMethod.requestBodySchema())) {
       return false;
     }
 
-    if (!matchResponseBodies(jaxrsMethod.responseBodySchema(), apiSpecMethod.responseBodySchema())) {
-      return false;
+    if (specMethod.responseBodySchema() == null) {
+      switch (jaxrsMethod.responseBodySchemaExtractionStatus()) {
+        case METHOD_RETURN_TYPE_DECLARED: case STATIC_VARIABLE_DECLARED: {
+          // the response body schema must be declared in the spec
+          return false;
+        }
+        default: {
+          // do not match schemas because the response *probably* has no body
+          // TODO warn anyway?
+          break;
+        }
+      }
+    } else {
+      switch (jaxrsMethod.responseBodySchemaExtractionStatus()) {
+        case METHOD_RETURN_TYPE_DECLARED: case STATIC_VARIABLE_DECLARED: {
+          // match response body schemas
+          if (!matchResponseBodies(jaxrsMethod.responseBodySchema(), specMethod.responseBodySchema())) {
+            return false;
+          }
+        }
+        default: {
+          // do not match schemas because these cases MUST be processed (and logged) by the invoker
+          // TODO warn anyway?
+          break;
+        }
+      }
     }
+
 
     return true;
   }
@@ -113,52 +128,5 @@ public class MatcherImpl implements Matcher {
       // TODO apply smart match
       return false;
     }
-  }
-
-  protected boolean matchPaths(String path1, String path2) {
-    if (path1 == null && path2 == null) {
-      return true;
-    } else if (path1 == null || path2 == null) {
-      return false;
-    }
-
-    // do not match path params
-    String path1paramsIgnored = path1.replaceAll("\\{.+?\\}", "{}");
-    String path2paramsIgnored = path2.replaceAll("\\{.+?\\}", "{}");
-
-    return path1paramsIgnored.equals(path2paramsIgnored);
-  }
-
-  @Override
-  public MatchResult match(MatchParams params) {
-
-    final MatchResult result = new MatchResult();
-
-    // match and retain unmatched
-    result.nonImplementedMethods = new ArrayList<>(params.apiSpecMethods);
-    result.nonDocumentedMethods = new ArrayList<>(params.jaxrsMethods);
-    result.matchedMethods = new ArrayList<>();
-
-    Iterator<? extends Method> apiSpecMethodIterator = result.nonImplementedMethods.iterator();
-    while (apiSpecMethodIterator.hasNext()) {
-      Method apiSpecMethod = apiSpecMethodIterator.next();
-
-      Iterator<? extends Method> jaxrsMethodIterator = result.nonDocumentedMethods.iterator();
-      while (jaxrsMethodIterator.hasNext()) {
-        Method jaxrsMethod = jaxrsMethodIterator.next();
-
-        if (matchMethods(jaxrsMethod, apiSpecMethod)) {
-          apiSpecMethodIterator.remove();
-          jaxrsMethodIterator.remove();
-
-          MatchResult.MethodTuple tuple = new MatchResult.MethodTuple();
-          tuple.apiSpecMethod = apiSpecMethod;
-          tuple.jaxrsMethod = jaxrsMethod;
-          result.matchedMethods.add(tuple);
-        }
-      }
-    }
-
-    return result;
   }
 }
