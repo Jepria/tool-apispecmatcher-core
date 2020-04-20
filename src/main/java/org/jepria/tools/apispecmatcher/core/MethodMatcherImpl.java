@@ -1,16 +1,15 @@
 package org.jepria.tools.apispecmatcher.core;
 
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class MatcherImpl implements Matcher {
+public class MethodMatcherImpl implements MethodMatcher {
 
-  protected boolean matchMethods(Method jaxrsMethod, Method apiSpecMethod) {
+  @Override
+  public boolean match(Method jaxrsMethod, Method apiSpecMethod) {
 
     // TODO remove this!
-    if (!new MethodMapperImpl().mapMethods(jaxrsMethod, apiSpecMethod)) {
+    if (!new MethodMapperImpl().map(jaxrsMethod, apiSpecMethod)) {
       return false;
     }
 
@@ -99,38 +98,5 @@ public class MatcherImpl implements Matcher {
   protected boolean matchSchemas(Map<String, Object> schema1, Map<String, Object> schema2) {
     // TODO implement schema matching
     return true;
-  }
-
-  @Override
-  public MatchResult match(MatchParams params) {
-
-    final MatchResult result = new MatchResult();
-
-    // match and retain unmatched
-    result.nonImplementedMethods = new ArrayList<>(params.apiSpecMethods);
-    result.nonDocumentedMethods = new ArrayList<>(params.jaxrsMethods);
-    result.matchedMethods = new ArrayList<>();
-
-    Iterator<? extends Method> apiSpecMethodIterator = result.nonImplementedMethods.iterator();
-    while (apiSpecMethodIterator.hasNext()) {
-      Method apiSpecMethod = apiSpecMethodIterator.next();
-
-      Iterator<? extends Method> jaxrsMethodIterator = result.nonDocumentedMethods.iterator();
-      while (jaxrsMethodIterator.hasNext()) {
-        Method jaxrsMethod = jaxrsMethodIterator.next();
-
-        if (matchMethods(jaxrsMethod, apiSpecMethod)) {
-          apiSpecMethodIterator.remove();
-          jaxrsMethodIterator.remove();
-
-          MatchResult.MethodTuple tuple = new MatchResult.MethodTuple();
-          tuple.apiSpecMethod = apiSpecMethod;
-          tuple.jaxrsMethod = jaxrsMethod;
-          result.matchedMethods.add(tuple);
-        }
-      }
-    }
-
-    return result;
   }
 }

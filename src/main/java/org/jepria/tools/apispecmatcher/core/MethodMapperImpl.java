@@ -3,7 +3,7 @@ package org.jepria.tools.apispecmatcher.core;
 public class MethodMapperImpl implements MethodMapper {
 
   @Override
-  public boolean mapMethods(Method method1, Method method2) {
+  public boolean map(Method method1, Method method2) {
     if (!method1.httpMethod().equalsIgnoreCase(method2.httpMethod())) {
       return false;
     }
