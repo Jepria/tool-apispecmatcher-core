@@ -21,18 +21,6 @@ public interface Method {
   // TODO better Path than String?
   String path();
 
-  interface Location {
-    // a sample stub method // TODO remove
-    String asString();
-  }
-
-  /**
-   * Location of the method and the containing resource
-   *
-   * @return
-   */
-  Location location();
-
   interface Parameter {
     /**
      * OpenAPI schema, as-is from json spec or built from the java type

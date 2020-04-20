@@ -3,12 +3,12 @@ package org.jepria.tools.apispecmatcher.core;
 public class MethodMapperImpl implements MethodMapper {
 
   @Override
-  public boolean map(Method method1, Method method2) {
-    if (!method1.httpMethod().equalsIgnoreCase(method2.httpMethod())) {
+  public boolean map(SpecMethod specMethod, JaxrsMethod jaxrsMethod) {
+    if (!specMethod.httpMethod().equalsIgnoreCase(jaxrsMethod.httpMethod())) {
       return false;
     }
 
-    if (!mapPaths(method1.path(), method2.path())) {
+    if (!mapPaths(specMethod.path(), jaxrsMethod.path())) {
       return false;
     }
 

@@ -6,15 +6,10 @@ import java.util.Map;
 public class MethodMatcherImpl implements MethodMatcher {
 
   @Override
-  public boolean match(Method jaxrsMethod, Method apiSpecMethod) {
-
-    // TODO remove this!
-    if (!new MethodMapperImpl().map(jaxrsMethod, apiSpecMethod)) {
-      return false;
-    }
+  public boolean match(SpecMethod specMethod, JaxrsMethod jaxrsMethod) {
 
     List<Method.Parameter> jaxrsParams = jaxrsMethod.params();
-    List<Method.Parameter> specParams = apiSpecMethod.params();
+    List<Method.Parameter> specParams = specMethod.params();
     if (jaxrsParams.size() != specParams.size()) {
       return false;
     }
@@ -27,11 +22,11 @@ public class MethodMatcherImpl implements MethodMatcher {
     }
 
 
-    if (!matchRequestBodies(jaxrsMethod.requestBodySchema(), apiSpecMethod.requestBodySchema())) {
+    if (!matchRequestBodies(jaxrsMethod.requestBodySchema(), specMethod.requestBodySchema())) {
       return false;
     }
 
-    if (!matchResponseBodies(jaxrsMethod.responseBodySchema(), apiSpecMethod.responseBodySchema())) {
+    if (!matchResponseBodies(jaxrsMethod.responseBodySchema(), specMethod.responseBodySchema())) {
       return false;
     }
 
