@@ -1,6 +1,7 @@
 package org.jepria.tools.apispecmatcher.core;
 
 import com.google.gson.GsonBuilder;
+
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +30,8 @@ public class MethodMatcherImpl implements MethodMatcher {
 
     if (specMethod.responseBodySchema() == null) {
       switch (jaxrsMethod.responseBodySchemaExtractionStatus()) {
-        case METHOD_RETURN_TYPE_DECLARED: case STATIC_VARIABLE_DECLARED: {
+        case METHOD_RETURN_TYPE_DECLARED:
+        case STATIC_VARIABLE_DECLARED: {
           // the response body schema must be declared in the spec
           return false;
         }
@@ -41,7 +43,8 @@ public class MethodMatcherImpl implements MethodMatcher {
       }
     } else {
       switch (jaxrsMethod.responseBodySchemaExtractionStatus()) {
-        case METHOD_RETURN_TYPE_DECLARED: case STATIC_VARIABLE_DECLARED: {
+        case METHOD_RETURN_TYPE_DECLARED:
+        case STATIC_VARIABLE_DECLARED: {
           // match response body schemas
           if (!matchResponseBodies(jaxrsMethod.responseBodySchema(), specMethod.responseBodySchema())) {
             return false;
@@ -120,6 +123,11 @@ public class MethodMatcherImpl implements MethodMatcher {
     if (schema1.equals(schema2)) { // try to match by simple equality
       return true;
     } else { // simple equality match failed, apply smart match
+      for (Map.Entry<String, Object> entry : schema1.entrySet()) {
+        if (schema2.get(entry.getKey()).equals(entry.getValue())) {
+          return true;
+        }
+      }
       System.out.println();
       System.out.println("///two schemas are not simply equal (but must be), apply smart match:");
       System.out.println("///schema1:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema1));
