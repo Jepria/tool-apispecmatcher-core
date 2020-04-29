@@ -118,28 +118,69 @@ public class MethodMatcherImpl implements MethodMatcher {
   }
 
   protected boolean matchSchemas(Map<String, Object> schema1, Map<String, Object> schema2) {
-    if (schema1.equals(schema2)) { // try to match by simple equality
+//    if (schema1.equals(schema2)) { // try to match by simple equality
+//      return true;
+//    } else if (matchValues(schema1, schema2)) { // simple equality match failed, apply smart match
+//      return true;
+//    }
+//    System.out.println();
+//    System.out.println("///two schemas are not simply equal (but must be), apply smart match:");
+//    System.out.println("///schema1:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema1));
+//    System.out.println("///schema2:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema2));
+//    System.out.println();
+//    // TODO apply smart match
+//    return false;
+//  }
+///*
+//
+//  {
+//    type: object
+//    props: {
+//     "a":{},
+//     "c":{}
+//    }
+//  }
+//
+//  {
+//     type: object
+//     props: {
+//     "a":{},
+//     "c":{},
+//
+//    }
+//  }
+//*/
+//  private boolean matchValues(Map<String, Object> schema1, Map<String, Object> schema2) {
+
+    if (schema1 == null && schema2 == null) {
       return true;
-    } else if (matchValues(schema1, schema2)) { // simple equality match failed, apply smart match
-      return true;
+    } else if (schema1 == null || schema2 == null) {
+      return false;
     }
-    System.out.println();
-    System.out.println("///two schemas are not simply equal (but must be), apply smart match:");
-    System.out.println("///schema1:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema1));
-    System.out.println("///schema2:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema2));
-    System.out.println();
-    // TODO apply smart match
-    return false;
-  }
-
-
-  private boolean matchValues(Map<String, Object> schema1, Map<String, Object> schema2) {
 
     if (schema1.get("type") != null && schema2.get("type") != null) {
       if ("object".equalsIgnoreCase((String) schema1.get("type"))) {
-        Map<String, Object> map1 = (Map<String, Object>) schema1.get("properties");
-        Map<String, Object> map2 = (Map<String, Object>) schema2.get("properties");
-        matchValues(map1, map2);
+        if (!"object".equalsIgnoreCase((String) schema2.get("type"))) {
+          return false;
+        } else {
+          Map<String, Object> props1 = (Map<String, Object>) schema1.get("properties");
+          Map<String, Object> props2 = (Map<String, Object>) schema2.get("properties");
+
+          if (props1 == null && props2 == null) {
+            return true;
+          } else if (props1 == null || props2 == null) {
+            return false;
+          }
+
+          if (!props1.keySet().equals(props2.keySet())) {
+            return false;
+          }
+
+
+
+          return matchValues(map1, map2);
+        }
+
       }
       if ("array".equalsIgnoreCase((String) schema1.get("type"))) {
         Map<String, Object> map1 = (Map<String, Object>) schema1.get("items");
