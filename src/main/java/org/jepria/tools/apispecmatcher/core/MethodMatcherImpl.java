@@ -1,9 +1,7 @@
 package org.jepria.tools.apispecmatcher.core;
 
 import com.google.gson.GsonBuilder;
-
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class MethodMatcherImpl implements MethodMatcher {
 
@@ -122,19 +120,60 @@ public class MethodMatcherImpl implements MethodMatcher {
   protected boolean matchSchemas(Map<String, Object> schema1, Map<String, Object> schema2) {
     if (schema1.equals(schema2)) { // try to match by simple equality
       return true;
-    } else { // simple equality match failed, apply smart match
-      for (Map.Entry<String, Object> entry : schema1.entrySet()) {
-        if (schema2.get(entry.getKey()).equals(entry.getValue())) {
-          return true;
-        }
-      }
-      System.out.println();
-      System.out.println("///two schemas are not simply equal (but must be), apply smart match:");
-      System.out.println("///schema1:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema1));
-      System.out.println("///schema2:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema2));
-      System.out.println();
-      // TODO apply smart match
-      return false;
+    } else if (matchValues(schema1, schema2)) { // simple equality match failed, apply smart match
+      return true;
     }
+    System.out.println();
+    System.out.println("///two schemas are not simply equal (but must be), apply smart match:");
+    System.out.println("///schema1:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema1));
+    System.out.println("///schema2:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema2));
+    System.out.println();
+    // TODO apply smart match
+    return false;
   }
+
+
+  private boolean matchValues(Map<String, Object> schema1, Map<String, Object> schema2) {
+
+    if (schema1.get("type") != null && schema2.get("type") != null) {
+      if ("object".equalsIgnoreCase((String) schema1.get("type"))) {
+        Map<String, Object> map1 = (Map<String, Object>) schema1.get("properties");
+        Map<String, Object> map2 = (Map<String, Object>) schema2.get("properties");
+        matchValues(map1, map2);
+      }
+      if ("array".equalsIgnoreCase((String) schema1.get("type"))) {
+        Map<String, Object> map1 = (Map<String, Object>) schema1.get("items");
+        Map<String, Object> map2 = (Map<String, Object>) schema2.get("items");
+        matchValues(map1, map2);
+      }
+      if (matchPrimitiveTypes(schema1) && matchPrimitiveTypes(schema2)) {
+        return true;
+      }
+
+    } else {
+      if (schema1.size() == schema2.size()) {
+        for (int i = 0; i < schema1.size(); i++) {
+          Map<String, Object> map1 = (Map<String, Object>) getListFromMap(schema1).get(i);
+          Map<String, Object> map2 = (Map<String, Object>) getListFromMap(schema2).get(i);
+          if (!matchValues(map1, map2)) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }
+    return true;
+  }
+
+  private boolean matchPrimitiveTypes(Map<String, Object> map) {
+    return "integer".equalsIgnoreCase((String) map.get("type"))
+            || "string".equalsIgnoreCase((String) map.get("type"));
+  }
+
+  private List<Object> getListFromMap(Map<String, Object> map) {
+    List<Object> list = new ArrayList<>();
+    map.forEach((key, value) -> list.add(value));
+    return list;
+  }
+
 }
