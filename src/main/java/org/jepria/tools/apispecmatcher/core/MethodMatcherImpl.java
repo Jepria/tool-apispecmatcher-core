@@ -119,9 +119,9 @@ public class MethodMatcherImpl implements MethodMatcher {
   }
 
   protected boolean matchSchemas(Map<String, Object> schema1, Map<String, Object> schema2) {
-    if (schema1.equals(schema2)) {
-      return true;
-    }
+//    if (schema1.equals(schema2)) {
+//      return true;
+//    }
 
     if (schema1 == null && schema2 == null) {
       return true;
@@ -141,7 +141,7 @@ public class MethodMatcherImpl implements MethodMatcher {
             properties1 = (Map<String, Object>) schema1.get("properties");
             properties2 = (Map<String, Object>) schema2.get("properties");
           } catch (ClassCastException ex) {
-            printDifferentSchemas(schema1, schema2);
+            System.out.println(ex.getMessage());
             return false;
           }
 
@@ -163,12 +163,15 @@ public class MethodMatcherImpl implements MethodMatcher {
               try {
                 value1 = (Map<String, Object>) entry.getValue();
                 value2 = (Map<String, Object>) properties2.get(key);
-                return matchSchemas(value1, value2);
+                if (!matchSchemas(value1, value2)) {
+                  return false;
+                }
               } catch (ClassCastException ex) {
-                printDifferentSchemas(schema1, schema2);
+                System.out.println(ex.getMessage());
                 return false;
               }
             }
+            return true;
           }
         }
       }
@@ -183,7 +186,7 @@ public class MethodMatcherImpl implements MethodMatcher {
             items1 = (Map<String, Object>) schema1.get("items");
             items2 = (Map<String, Object>) schema2.get("items");
           } catch (ClassCastException ex) {
-            printDifferentSchemas(schema1, schema2);
+            System.out.println(ex.getMessage());
             return false;
           }
 
@@ -198,36 +201,76 @@ public class MethodMatcherImpl implements MethodMatcher {
             printDifferentSchemas(schema1, schema2);
             return false;
           } else {
-            for (Map.Entry<String, Object> entry : items1.entrySet()) {
-              String key = entry.getKey();
-              Map<String, Object> value1;
-              Map<String, Object> value2;
-              try {
-                value1 = (Map<String, Object>) entry.getValue();
-                value2 = (Map<String, Object>) items2.get(key);
-                return matchSchemas(value1, value2);
-              } catch (ClassCastException ex) {
-                printDifferentSchemas(schema1, schema2);
-                return false;
-              }
+            if (!matchSchemas(items1, items2)) {
+              printDifferentSchemas(schema1, schema2);
+              return false;
             }
+            return true;
+//            for (Map.Entry<String, Object> entry : items1.entrySet()) {
+//              String key = entry.getKey();
+//              if ((entry.getValue() instanceof Map) && (items2.get(key) instanceof Map)) {
+//                Map<String, Object> value1;
+//                Map<String, Object> value2;
+//                try {
+//                  value1 = (Map<String, Object>) entry.getValue();
+//                  value2 = (Map<String, Object>) items2.get(key);
+//                  if (!matchSchemas(value1, value2)) {
+//                    return false;
+//                  }
+//                } catch (ClassCastException ex) {
+//                  System.out.println(ex.getMessage());
+//                  return false;
+//                }
+//              }
+//              if((entry.getValue() instanceof String) && (items2.get(key) instanceof String)){
+//                if (!matchSchemas(items1, items2)) {
+//                  return false;
+//                }
+//              }
+//            }
           }
         }
       }
-      if (matchPrimitiveTypes(schema1) && matchPrimitiveTypes(schema2)) {
+      if (matchPrimitiveTypes(schema1, schema2, "integer")) {
         return true;
       }
 
+      if (matchPrimitiveTypes(schema1, schema2, "string")) {
+        return true;
+      }
+
+      if (matchPrimitiveTypes(schema1, schema2, "boolean")) {
+        return true;
+      }
+      printDifferentSchemas(schema1, schema2);
+      return false;
     } else {
       printDifferentSchemas(schema1, schema2);
       return false;
     }
-    return false;
   }
 
-  private boolean matchPrimitiveTypes(Map<String, Object> map) {
-    return "integer".equalsIgnoreCase((String) map.get("type"))
-            || "string".equalsIgnoreCase((String) map.get("type"));
+  private boolean matchPrimitiveTypes(Map<String, Object> schema1, Map<String, Object> schema2, String primitiveType) {
+    String type1;
+    String type2;
+    try {
+      type1 = (String) schema1.get("type");
+      type2 = (String) schema2.get("type");
+    } catch (ClassCastException ex) {
+      System.out.println(ex.getMessage());
+      return false;
+    }
+    if (type1 == null && type2 == null) {
+      return true;
+    } else if (type1 == null || type2 == null) {
+      return false;
+    }
+    if ((primitiveType.equalsIgnoreCase(type1) && primitiveType.equalsIgnoreCase(type2))
+            && type1.equalsIgnoreCase(type2)) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   private void printDifferentSchemas(Map<String, Object> schema1, Map<String, Object> schema2) {
