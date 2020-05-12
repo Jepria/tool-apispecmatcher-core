@@ -2,7 +2,8 @@ package org.jepria.tools.apispecmatcher.core;
 
 import com.google.gson.GsonBuilder;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 public class MethodMatcherImpl implements MethodMatcher {
 
@@ -129,75 +130,80 @@ public class MethodMatcherImpl implements MethodMatcher {
     String type1 = (String) schema1.get("type");
     String type2 = (String) schema2.get("type");
 
-    if (type1 != null && type2 != null) {
-      if ("object".equals(type1)) {
-        if (!"object".equals(type2)) {
-          printDifferentSchemas(schema1, schema2);
-          return false;
-        } else {
-          Map<String, Object> properties1 = (Map<String, Object>) schema1.get("properties");
-          Map<String, Object> properties2 = (Map<String, Object>) schema2.get("properties");
-          if (properties1 == null && properties2 == null) {
-            return true;
-          } else if (properties1 == null || properties2 == null) {
-            printDifferentSchemas(schema1, schema2);
-            return false;
-          }
-          if (!properties1.keySet().equals(properties2.keySet())) {
-            printDifferentSchemas(schema1, schema2);
-            return false;
-          } else {
-            for (Map.Entry<String, Object> entry : properties1.entrySet()) {
-              Map<String, Object> value1 = (Map<String, Object>) entry.getValue();
-              Map<String, Object> value2 = (Map<String, Object>) properties2.get(entry.getKey());
-              if (!matchSchemas(value1, value2)) {
-                return false;
-              }
-            }
-            return true;
-          }
-        }
-      }
+    if (type1 == null && type2 == null) {
+      return true;
+    } else if (type1 == null || type2 == null) {
+      return false;
+    }
 
-      if ("array".equals(type1)) {
-        if (!"array".equals(type2)) {
+    if ("object".equals(type1)) {
+      if (!"object".equals(type2)) {
+        printDifferentSchemas(schema1, schema2);
+        return false;
+      } else {
+        Map<String, Object> properties1 = (Map<String, Object>) schema1.get("properties");
+        Map<String, Object> properties2 = (Map<String, Object>) schema2.get("properties");
+        if (properties1 == null && properties2 == null) {
+          return true;
+        } else if (properties1 == null || properties2 == null) {
+          printDifferentSchemas(schema1, schema2);
+          return false;
+        }
+        if (!properties1.keySet().equals(properties2.keySet())) {
           printDifferentSchemas(schema1, schema2);
           return false;
         } else {
-          Map<String, Object> items1 = (Map<String, Object>) schema1.get("items");
-          Map<String, Object> items2 = (Map<String, Object>) schema2.get("items");
-          if (items1 == null && items2 == null) {
-            return true;
-          } else if (items1 == null || items2 == null) {
-            printDifferentSchemas(schema1, schema2);
-            return false;
-          }
-          if (!matchSchemas(items1, items2)) {
-            printDifferentSchemas(schema1, schema2);
-            return false;
+          for (String key: properties1.keySet()) {
+            Map<String, Object> value1 = (Map<String, Object>) properties1.get(key);
+            Map<String, Object> value2 = (Map<String, Object>) properties2.get(key);
+            if (!matchSchemas(value1, value2)) {
+              return false;
+            }
           }
           return true;
         }
       }
-
-      if ("integer".equals(type1) && "integer".equals(type2)) {
+    } else if ("array".equals(type1)) {
+      if (!"array".equals(type2)) {
+        printDifferentSchemas(schema1, schema2);
+        return false;
+      } else {
+        Map<String, Object> items1 = (Map<String, Object>) schema1.get("items");
+        Map<String, Object> items2 = (Map<String, Object>) schema2.get("items");
+        if (items1 == null && items2 == null) {
+          return true;
+        } else if (items1 == null || items2 == null) {
+          printDifferentSchemas(schema1, schema2);
+          return false;
+        }
+        if (!matchSchemas(items1, items2)) {
+          printDifferentSchemas(schema1, schema2);
+          return false;
+        }
         return true;
       }
-
-      if ("string".equals(type1) && "string".equals(type2)) {
+    } else if ("integer".equals(type1)) {
+      if ("integer".equals(type2)) {
         return true;
+      } else {
+        return false;
       }
-
-      if ("boolean".equals(type1) && "boolean".equals(type2)) {
+    } else if ("string".equals(type1)) {
+      if ("string".equals(type2)) {
         return true;
+      } else {
+        return false;
       }
-
-      printDifferentSchemas(schema1, schema2);
-      return false;
-    } else {
-      printDifferentSchemas(schema1, schema2);
-      return false;
+    } else if ("boolean".equals(type1)) {
+      if ("boolean".equals(type2)) {
+        return true;
+      } else {
+        return false;
+      }
     }
+
+    printDifferentSchemas(schema1, schema2);
+    return false;
   }
 
   private void printDifferentSchemas(Map<String, Object> schema1, Map<String, Object> schema2) {
