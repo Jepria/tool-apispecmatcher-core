@@ -138,7 +138,6 @@ public class MethodMatcherImpl implements MethodMatcher {
 
     if ("object".equals(type1)) {
       if (!"object".equals(type2)) {
-        printDifferentSchemas(schema1, schema2);
         return false;
       } else {
         Map<String, Object> properties1 = (Map<String, Object>) schema1.get("properties");
@@ -146,14 +145,12 @@ public class MethodMatcherImpl implements MethodMatcher {
         if (properties1 == null && properties2 == null) {
           return true;
         } else if (properties1 == null || properties2 == null) {
-          printDifferentSchemas(schema1, schema2);
           return false;
         }
         if (!properties1.keySet().equals(properties2.keySet())) {
-          printDifferentSchemas(schema1, schema2);
           return false;
         } else {
-          for (String key: properties1.keySet()) {
+          for (String key : properties1.keySet()) {
             Map<String, Object> value1 = (Map<String, Object>) properties1.get(key);
             Map<String, Object> value2 = (Map<String, Object>) properties2.get(key);
             if (!matchSchemas(value1, value2)) {
@@ -165,7 +162,6 @@ public class MethodMatcherImpl implements MethodMatcher {
       }
     } else if ("array".equals(type1)) {
       if (!"array".equals(type2)) {
-        printDifferentSchemas(schema1, schema2);
         return false;
       } else {
         Map<String, Object> items1 = (Map<String, Object>) schema1.get("items");
@@ -173,11 +169,9 @@ public class MethodMatcherImpl implements MethodMatcher {
         if (items1 == null && items2 == null) {
           return true;
         } else if (items1 == null || items2 == null) {
-          printDifferentSchemas(schema1, schema2);
           return false;
         }
         if (!matchSchemas(items1, items2)) {
-          printDifferentSchemas(schema1, schema2);
           return false;
         }
         return true;
@@ -201,17 +195,6 @@ public class MethodMatcherImpl implements MethodMatcher {
         return false;
       }
     }
-
-    printDifferentSchemas(schema1, schema2);
     return false;
   }
-
-  private void printDifferentSchemas(Map<String, Object> schema1, Map<String, Object> schema2) {
-    System.out.println();
-    System.out.println("///two schemas are not simply equal (but must be), apply smart match:");
-    System.out.println("///schema1:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema1));
-    System.out.println("///schema2:" + new GsonBuilder().setPrettyPrinting().create().toJson(schema2));
-    System.out.println();
-  }
-
 }
