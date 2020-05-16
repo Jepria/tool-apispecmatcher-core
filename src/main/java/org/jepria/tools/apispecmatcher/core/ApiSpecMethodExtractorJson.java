@@ -20,6 +20,7 @@ public class ApiSpecMethodExtractorJson {
     final Map<String, Object> map;
 
     map = new Gson().fromJson(spec, new TypeToken<Map<String, Object>>() {}.getType());
+    JsonDereferencer.dereference(map);
 
     Map<String, Object> pathsMap = (Map<String, Object>)map.get("paths");
     if (pathsMap != null) {
@@ -45,10 +46,7 @@ public class ApiSpecMethodExtractorJson {
                       }
                     }
                     if (theContentMap != null) {
-                      Map<String, Object> schemaMap = (Map<String, Object>) theContentMap.get("schema");
-                      if (schemaMap != null) {
-                        requestBodySchema0 = OpenApiSchemaDeployer.deploySchema(schemaMap, map);
-                      }
+                      requestBodySchema0 = (Map<String, Object>) theContentMap.get("schema");
                     }
                   }
                 }
@@ -62,8 +60,7 @@ public class ApiSpecMethodExtractorJson {
                 if (parametersList != null) {
                   for (Map<String, Object> parameterMap: parametersList) {
 
-                    Map<String, Object> schemaRoot = (Map<String, Object>)parameterMap.get("schema");
-                    final Map<String, Object> schema = OpenApiSchemaDeployer.deploySchema(schemaRoot, map);
+                    final Map<String, Object> schema = (Map<String, Object>)parameterMap.get("schema");
                     final String in = (String)parameterMap.get("in");
                     final String name = (String)parameterMap.get("name");
 
@@ -102,10 +99,7 @@ public class ApiSpecMethodExtractorJson {
                         }
                       }
                       if (theContentMap != null) {
-                        Map<String, Object> schemaMap = (Map<String, Object>) theContentMap.get("schema");
-                        if (schemaMap != null) {
-                          responseBodySchema0 = OpenApiSchemaDeployer.deploySchema(schemaMap, map);
-                        }
+                        responseBodySchema0 = (Map<String, Object>) theContentMap.get("schema");
                       }
                     }
                   }
