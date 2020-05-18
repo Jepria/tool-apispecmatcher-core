@@ -1,7 +1,5 @@
 package org.jepria.tools.apispecmatcher.core;
 
-import com.google.gson.GsonBuilder;
-
 import java.util.List;
 import java.util.Map;
 
@@ -15,10 +13,17 @@ public class MethodMatcherImpl implements MethodMatcher {
     if (jaxrsParams.size() != specParams.size()) {
       return false;
     }
-    for (int i = 0; i < jaxrsParams.size(); i++) {
-      Method.Parameter jaxrsParam = jaxrsParams.get(i);
-      Method.Parameter specParam = specParams.get(i);
-      if (!matchParams(jaxrsParam, specParam)) {
+
+    // match params (without order)
+    for (Method.Parameter jaxrsParam: jaxrsParams) {
+      boolean matchFound = false;
+      for (Method.Parameter specParam: specParams) {
+        if (matchParams(jaxrsParam, specParam)) {
+          matchFound = true;
+          break;
+        }
+      }
+      if (!matchFound) {
         return false;
       }
     }
