@@ -88,9 +88,23 @@ public class JaxrsMethodExtractorCompiled {
 
       // nullable
       String methodPathAnnotationValue = extractJaxrsPath(refMethod);
-      final String pathAnnotationValue;
+      final String path;
       {
-        pathAnnotationValue = (classPathAnnotationValue != null ? classPathAnnotationValue : "") + (methodPathAnnotationValue != null ? methodPathAnnotationValue : "");
+        // path = @Path of class + @Path of method, minding slashes which might be omitted in annotations
+        String path0 = "";
+        if (classPathAnnotationValue != null) {
+          if (!classPathAnnotationValue.startsWith("/")) {
+            path0 += "/";
+          }
+          path0 += classPathAnnotationValue;
+        }
+        if (methodPathAnnotationValue != null) {
+          if (!methodPathAnnotationValue.startsWith("/")) {
+            path0 += "/";
+          }
+          path0 += methodPathAnnotationValue;
+        }
+        path = path0;
       }
 
       final String httpMethod;
@@ -291,7 +305,7 @@ public class JaxrsMethodExtractorCompiled {
           }
           @Override
           public String path() {
-            return pathAnnotationValue;
+            return path;
           }
           @Override
           public List<Parameter> params() {
